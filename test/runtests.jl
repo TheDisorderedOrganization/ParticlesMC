@@ -1,5 +1,5 @@
-using MCMC
-using MCMC.ParticlesMC
+using MonteCarlo
+using ParticlesMC
 using Test
 using StaticArrays
 using Distributions
