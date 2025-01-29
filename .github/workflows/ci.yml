@@ -33,4 +33,4 @@ jobs:
           ${{ runner.os }}-julia-
 
     - name: Run tests
-      run: julia --project=. -e 'using Pkg; Pkg.test()'
+      run: julia --project=. -e 'using Pkg;  Pkg.add(PackageSpec(url="https://github.com/TheDisorderedOrganization/MonteCarlo.git")); Pkg.test()'
