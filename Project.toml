@@ -1,4 +1,6 @@
 name = "ParticlesMC"
+uuid = "98828e2c-de49-11ef-324d-d77a22de11e4"
+version = "0.1.0"
 
 [deps]
 ComponentArrays = "b0b7db55-cfe3-40fc-9ded-d10e2dbeff66"
