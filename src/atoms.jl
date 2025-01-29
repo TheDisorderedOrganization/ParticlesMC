@@ -34,9 +34,10 @@ end
 function calc_energy_ij!(system::Atoms, i, j,  position_i, species_i)
     if i != j
         position_j, species_j = system.position[j], system.species[j]
-        r = norm(nearest_image_distance(position_i, position_j, system.box))
-        if r ≤ cutoff(species_i, species_j, system.model)
-            energy_ij = potential(r, species_i, species_j, system.model)
+        image = nearest_image_distance(position_i, position_j, system.box)
+        r2 = dot(image, image)
+        if r2 ≤ cutoff2(species_i, species_j, system.model)
+            energy_ij = potential(r2, species_i, species_j, system.model)
             return energy_ij
         end
     end
