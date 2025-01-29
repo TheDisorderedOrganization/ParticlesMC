@@ -4,7 +4,7 @@
 
 ## Overview
 
-With the `ParticlesMC` module you can run atomic / molecular Monte Carlo simulations.
+With the `ParticlesMC` module you can run atomic / molecular Monte Carlo simulations. It is built on top of the `MonteCarlo` module.
 
 
 ## Installation
