@@ -42,12 +42,13 @@ function calc_energy_ij!(system::Molecules, i, j,  position_i, species_i, bonded
     if i != j
         energy = zero(typeof(system.density))
         position_j, species_j = system.position[j], system.species[j]
-        r = norm(nearest_image_distance(position_i, position_j, system.box))
-        if r ≤ cutoff(species_i, species_j, system.model)
-            energy += potential(r, species_i, species_j, system.model)
+        image = nearest_image_distance(position_i, position_j, system.box)
+        r2 = dot(image, image)
+        if r2 ≤ cutoff2(species_i, species_j, system.model)
+            energy += potential(r2, species_i, species_j, system.model)
         end
         if bonded
-            energy += bond_potential(r, species_i, species_j, system.model)
+            energy += bond_potential(r2, species_i, species_j, system.model)
         end
         return energy
     end
