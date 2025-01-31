@@ -1,5 +1,35 @@
 using ComponentArrays
 
+
+function cache_update!(system::Particles, action::Action)
+    index_set = BitSet()
+    @inbounds for elt in system.cache
+        i = elt[1]
+        if !(i in index_set)
+            push!(index_set, i)
+            system.local_energy[i] = elt[2] 
+        end
+    end
+end
+
+function build_cache!(system::Particles, i, ::EmptyList)
+    return nothing
+end
+
+function build_cache!(system::Particles, i, cell_list::LinkedList)
+    mc = get_cell(system.position[i], cell_list.cell)
+    @inbounds for mc2 in Iterators.product(map(x -> x-1:x+1, mc)...)
+        # Calculate the scalar cell index of the neighbour cell (with PBC)
+        c2 = cell_index(mc2, cell_list.ncells)
+        # Scan atoms in cell c2
+        j = cell_list.head[c2]
+        while (j != -1)
+            push!(system.cache, (j, system.local_energy[j]))
+            j = cell_list.list[j]
+        end
+    end
+end
+
 ###############################################################################
 # SIMPLE DISPLACEMENT
 
@@ -19,25 +49,26 @@ mutable struct Displacement{T<:AbstractArray} <: Action
     δ::T
 end
 
-function cache_update!(system::Particles, action::Displacement)
-    @inbounds for elt in system.cache
-        system.local_energy[elt[1]] = elt[2] 
-    end
-end
-
 
 function MonteCarlo.perform_action!(system::Particles, action::Displacement)
     empty!(system.cache)
     e₁ = destroy_particle!(system, action.i, system.cell_list)
     system.position[action.i] = system.position[action.i] + action.δ
-    update_cell_list!(system, action.i, system.cell_list)
+    c, c2 = old_new_cell(system, action.i, system.cell_list)
+    if c != c2
+        update_cell_list!(system, action.i, c, c2, system.cell_list)
+        build_cache!(system, action.i, system.cell_list)
+    end
     e₂ = create_particle!(system, action.i, system.cell_list)
     return e₁, e₂
 end
 
 function MonteCarlo.perform_action_cached!(system::Particles, action::Displacement)
     system.position[action.i] = system.position[action.i] + action.δ
-    update_cell_list!(system, action.i, system.cell_list)
+    c, c2 = old_new_cell(system, action.i, system.cell_list)
+    if c != c2
+        update_cell_list!(system, action.i, c, c2, system.cell_list)
+    end
     cache_update!(system, action)
 end
 
@@ -70,17 +101,6 @@ mutable struct DiscreteSwap <: Action
     j::Int
     species::Tuple{Int,Int}
     particles_per_species::Tuple{Int,Int}
-end
-
-function cache_update!(system::Particles, action::DiscreteSwap)
-    index_set = BitSet()
-    @inbounds for elt in system.cache
-        i = elt[1]
-        if !(i in index_set)
-            push!(index_set, i)
-            system.local_energy[i] = elt[2] 
-        end
-    end
 end
 
 function swap_particle_species!(system::Particles, spi, i, spj, j)
