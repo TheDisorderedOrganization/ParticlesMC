@@ -29,7 +29,7 @@ cutoff(si, sj, model::ContinuousModel) = model.rcut * (si + sj) / 2
 ## POTENTIALS
 harmonic_spheres(r2, epsilon, sigma2) = epsilon * (1 - r2 / sigma2)
 
-inverse_power(r2, epsilon, sigma2, n::Int) = epsilon * (sigma2 / r2)^(n/2)
+inverse_power(r2, epsilon, sigma2, ndiv2 ) = epsilon * (sigma2 / r2)^(ndiv2)
 
 lennard_jones(r2, epsilon, sigma2) = 4 * epsilon * ((sigma2 / r2)^6 - (sigma2 / r2)^3)
 
@@ -51,12 +51,13 @@ A struct representing a soft-sphere interaction model where particles interact v
 - `rcut::T`: Cutoff distance matrix beyond which interactions are neglected.
 - `shift::T`: Shift matrix to ensure the potential is zero at the cutoff distance.
 """
-struct SoftSpheres{T<:AbstractArray} <: DiscreteModel
+struct SoftSpheres{T<:AbstractArray, N<:Number} <: DiscreteModel
     name::String
     epsilon::T
     sigma::T
     sigma2::T
     n::Int
+    ndiv2::N
     rcut::T
     rcut2::T
     shift::T
@@ -66,7 +67,8 @@ function SoftSpheres(epsilon, sigma, n; rcut=2.5*sigma, name="SoftSpheres$(sigma
     shift = [inverse_power(rcut[spi, spj], epsilon[spi, spj], sigma[spi, spj], n) for spi in 1:2, spj in 1:2]
     sigma2 = sigma .^ 2
     rcut2 = rcut .^ 2
-    return SoftSpheres(name, epsilon, sigma, sigma2, n, rcut, rcut2, shift)
+    ndiv2 = isodd(n) ? n / 2 : n ÷ 2
+    return SoftSpheres(name, epsilon, sigma, sigma2, n, ndiv2, rcut, rcut2, shift)
 end
 
 function BHHP()
@@ -173,7 +175,7 @@ function GeneralKG(epsilon, sigma, k, r0; rcut=2^(1 / 6) * sigma)
     sigma2 = sigma .^ 2
     r02 = r0 .^ 2
     rcut2 = rcut .^ 2
-    kr02 = -0.5 .* k .* r02 
+    kr02 = - k .* r02 ./ 2 
     return GeneralKG(name, epsilon, sigma2, k, r02, kr02, rcut, rcut2)
 end
 
