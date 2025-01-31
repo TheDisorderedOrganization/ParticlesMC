@@ -177,8 +177,8 @@ function GeneralKG(epsilon, sigma, k, r0; rcut=2^(1 / 6) * sigma)
     return GeneralKG(name, epsilon, sigma2, k, r02, kr02, rcut, rcut2)
 end
 
-function potential(r, spi, spj, model::GeneralKG)
-    return wca(r, model.epsilon[spi, spj], model.sigma2[spi, spj])
+function potential(r2, spi, spj, model::GeneralKG)
+    return wca(r2, model.epsilon[spi, spj], model.sigma2[spi, spj])
 end
 
 function bond_potential(r2, spi, spj, model::GeneralKG)
