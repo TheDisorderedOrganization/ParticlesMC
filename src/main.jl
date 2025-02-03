@@ -4,7 +4,7 @@ function callback_energy(simulation)
     return mean(mean(system.local_energy) for system in simulation.chains) / 2
 end
 
-function write_system(io, system::Particles)
+function MonteCarlo.write_system(io, system::Particles)
     println(io, "\tNumber of particles: $(system.N)")
     println(io, "\tDimensions: $(system.d)")
     println(io, "\tCell: $(system.box)")
@@ -15,7 +15,7 @@ function write_system(io, system::Particles)
     return nothing
 end
 
-function store_trajectory(trj, system::Particles, t)
+function MonteCarlo.store_trajectory(trj, system::Particles, t)
     println(trj, system.N)
     box = replace(replace(string(system.box), r"[\[\]]" => ""), r",\s+" => ",")
     println(trj, "step:$t columns:species,position dt:1 cell:$(box) rho:$(system.density) T:$(system.temperature) model:$(system.model.name) potential_energy_per_particle:$(mean(system.local_energy)/2)")
