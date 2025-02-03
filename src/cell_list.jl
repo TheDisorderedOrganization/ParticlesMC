@@ -72,33 +72,37 @@ function update_cell_list!(::Particles, i, ::EmptyList)
     return nothing
 end
 
-function update_cell_list!(system::Particles, i, ::LinkedList)
-    # Old cell index
+function update_cell_list!(system::Particles, i, c, c2, ::LinkedList)
+    # Remove particle from old cell (distinguish head or not)
+    if system.cell_list.head[c] == i
+        system.cell_list.head[c] = system.cell_list.list[i]
+    else
+        # Find preceding particle in old cell
+        j = system.cell_list.head[c]
+        while system.cell_list.list[j] != i
+            j = system.cell_list.list[j]
+        end
+        # Update list reference in old cell
+        system.cell_list.list[j] = system.cell_list.list[i]
+    end
+    # Insert particle into new cell (exchange with head)
+    system.cell_list.list[i] = system.cell_list.head[c2]
+    system.cell_list.head[c2] = i
+    # Update cell index
+    system.cell_list.cs[i] = c2
+    return nothing
+end
+
+function old_new_cell(system::Particles, i, ::LinkedList)
     c = system.cell_list.cs[i]
     # New cell index
     mc2 = get_cell(system.position[i], system.cell_list.cell)
     c2 = cell_index(mc2, system.cell_list.ncells)
-    # Check if particle changed cell, otherwise do nothing
-    if c != c2
-        # Remove particle from old cell (distinguish head or not)
-        if system.cell_list.head[c] == i
-            system.cell_list.head[c] = system.cell_list.list[i]
-        else
-            # Find preceding particle in old cell
-            j = system.cell_list.head[c]
-            while system.cell_list.list[j] != i
-                j = system.cell_list.list[j]
-            end
-            # Update list reference in old cell
-            system.cell_list.list[j] = system.cell_list.list[i]
-        end
-        # Insert particle into new cell (exchange with head)
-        system.cell_list.list[i] = system.cell_list.head[c2]
-        system.cell_list.head[c2] = i
-        # Update cell index
-        system.cell_list.cs[i] = c2
-    end
-    return nothing
+    return c, c2
+end
+
+function old_new_cell(system::Particles, i, ::EmptyList)
+    return 1, 1
 end
 
 nothing
