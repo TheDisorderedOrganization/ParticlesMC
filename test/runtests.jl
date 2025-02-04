@@ -3,7 +3,6 @@ using ParticlesMC
 using Test
 using StaticArrays
 using Distributions
-using Random
 using ComponentArrays
 using DelimitedFiles
 
@@ -33,7 +32,6 @@ using DelimitedFiles
     # Test simulation energy
     M = 1
     seed = 10
-    rng = Xoshiro(seed)
     sp1, sp2, sp3 = findall(isequal(1), species), findall(isequal(2), species), findall(isequal(3), species)
     NA, NB, NC = length(sp1), length(sp2), length(sp3)
     steps = 100
