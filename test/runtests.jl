@@ -8,7 +8,7 @@ using DelimitedFiles
 
 @testset "Potential energy test" begin
     # Test inital configuration
-    data = readlines("test/config_0.xyz")
+    data = readlines("config_0.xyz")
     N = parse(Int, data[4])
     gbox = parse.(Float64, split(data[6], " "))
     L = gbox[2] - gbox[1]
