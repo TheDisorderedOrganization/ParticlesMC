@@ -33,4 +33,9 @@ jobs:
           ${{ runner.os }}-julia-
 
     - name: Run tests
-      run: julia --project=. -e 'using Pkg;  Pkg.add(PackageSpec(url="https://github.com/TheDisorderedOrganization/MonteCarlo.git")); Pkg.test()'
+      run: julia --project=. --code-coverage=user -e 'using Pkg;  Pkg.add(PackageSpec(url="https://github.com/TheDisorderedOrganization/MonteCarlo.git")); Pkg.test()'
+      
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
