@@ -1,0 +1,16 @@
+# General simulation parameters
+steps: 10000             # Number of Monte Carlo sweep
+nsim: 1                  # Number of chains per input file
+temperature: null        # Overrides temperature of the system
+density: null            # Override density of the system
+model: JBB               # Override model
+seed: 1                  # Random number seeds
+
+
+# Initial conditions
+initial_positions:
+  - [1.0, 2.0, 3.0]     # Position of particle 1
+  - [2.0, 3.0, 4.0]     # Position of particle 2
+  - [3.0, 4.0, 5.0]     # Position of particle 3
+  - [4.0, 5.0, 6.0]     # Position of particle 4
+  # Add more particles as needed
