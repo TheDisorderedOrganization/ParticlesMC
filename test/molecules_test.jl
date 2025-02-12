@@ -60,6 +60,7 @@ pools = [(
 ## Define the simulation struct
 steps = 1000
 burn = 0
+block = [0, 10]
 sampletimes = build_schedule(steps, burn, block)
 schedulers = [build_schedule(steps, 0, 1), sampletimes, sampletimes, [0, steps], build_schedule(steps, burn, steps ÷ 10)]
 callbacks = (callback_energy, callback_acceptance)
