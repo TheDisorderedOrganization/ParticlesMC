@@ -17,7 +17,7 @@ include("moves.jl")
 export callback_energy
 export nearest_image_distance
 export Model
-export Model, GeneralKG, JBB, SoftSpheres, KobAndersen
+export Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen
 export CellList, LinkedList, EmptyList
 export Atoms, Molecules
 export Displacement, DiscreteSwap
