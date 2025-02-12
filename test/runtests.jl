@@ -37,7 +37,8 @@ using DelimitedFiles
     steps = 100
     burn = 0
     block = [0, 1, 2, 4, 8]
-    sampletimes = scheduler(steps, burn, block)
+    sampletimes = build_schedule(steps, burn, block)
+    schedulers = [build_schedule(steps, 0, 1), sampletimes, sampletimes, [0, steps], build_schedule(steps, burn, steps ÷ 10)]
     callbacks = (callback_energy, callback_acceptance)
 
     # NO SWAPS
@@ -48,17 +49,32 @@ using DelimitedFiles
         Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1 - pswap),
     ) for _ in 1:M]
     
+
     ## Empty List simulation
     chains_el = [deepcopy(system_el)]
     path_el = "data/noswap/empty_list/"
-    simulation = Simulation(chains_el, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path_el)
-    run!(simulation, callbacks...)
+    algorithms = (
+        Metropolis(chains_el, pools; sweepstep=N, seed=seed, parallel=false),
+        StoreCallbacks(callbacks, path_el),
+        StoreTrajectories(chains_el, path_el),
+        StoreLastFrames(chains_el, path_el),
+        PrintTimeSteps(),
+        )
+    simulation = Simulation(chains_el, algorithms, steps; schedulers=schedulers, path=path_el, verbose=true)
+    run!(simulation)
     
     ## Linked List simulation
     chains_ll = [deepcopy(system_ll)]
     path_ll = "data/noswap/linked_list/"
-    simulation = Simulation(chains_ll, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path_ll)
-    run!(simulation, callbacks...)
+    algorithms = (
+        Metropolis(chains_ll, pools; sweepstep=N, seed=seed, parallel=false),
+        StoreCallbacks(callbacks, path_ll),
+        StoreTrajectories(chains_ll, path_ll),
+        StoreLastFrames(chains_ll, path_ll),
+        PrintTimeSteps(),
+        )
+    simulation = Simulation(chains_ll, algorithms, steps; schedulers=schedulers, path=path_ll, verbose=true)
+    run!(simulation)
 
     ## Read energy data and compare
     path_energy_el = joinpath(path_el, "energy.dat")
@@ -82,14 +98,28 @@ using DelimitedFiles
     ## Empty List simulation
     chains_el = [deepcopy(system_el)]
     path_el = "data/swap/empty_list/"
-    simulation = Simulation(chains_el, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path_el)
-    run!(simulation, callbacks...)
+    algorithms = (
+        Metropolis(chains_el, pools; sweepstep=N, seed=seed, parallel=false),
+        StoreCallbacks(callbacks, path_el),
+        StoreTrajectories(chains_el, path_el),
+        StoreLastFrames(chains_el, path_el),
+        PrintTimeSteps(),
+        )
+    simulation = Simulation(chains_el, algorithms, steps; schedulers=schedulers, path=path_el, verbose=true)
+    run!(simulation)
     
     ## Linked List simulation
     chains_ll = [deepcopy(system_ll)]
     path_ll = "data/swap/linked_list/"
-    simulation = Simulation(chains_ll, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path_ll)
-    run!(simulation, callbacks...)
+    algorithms = (
+        Metropolis(chains_ll, pools; sweepstep=N, seed=seed, parallel=false),
+        StoreCallbacks(callbacks, path_ll),
+        StoreTrajectories(chains_ll, path_ll),
+        StoreLastFrames(chains_ll, path_ll),
+        PrintTimeSteps(),
+        )
+    simulation = Simulation(chains_ll, algorithms, steps; schedulers=schedulers, path=path_ll, verbose=true)
+    run!(simulation)
 
     ## Read energy data and compare
     path_energy_el = joinpath(path_el, "energy.dat")

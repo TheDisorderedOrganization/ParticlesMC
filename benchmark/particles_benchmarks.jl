@@ -1,4 +1,5 @@
-using MCMC
+using MonteCarlo
+using ParticlesMC
 using BenchmarkTools
 using StaticArrays
 using Distributions
@@ -19,7 +20,7 @@ begin
     box = @SVector fill(typeof(temperature)((N / density)^(1 / d)), d)
     position = [box .* @SVector rand(rng, d) for i in 1:N]
     species = shuffle!(rng, vcat(ones(Int, NA), 2ones(Int, NB)))
-    model = MCMC.BHHP()
+    model = BHHP()
     system = System(position, species, density, temperature, model)
     displacement_policy = SimpleGaussian()
     displacement_parameters = ComponentArray(σ=0.1)
@@ -42,7 +43,7 @@ begin
     box = @SVector fill(typeof(temperature)((N / density)^(1 / d)), d)
     position = [box .* @SVector rand(rng, d) for i in 1:N]
     species = shuffle!(rng, vcat(ones(Int, NA), 2ones(Int, NB)))
-    model = MCMC.BHHP()
+    model = BHHP()
     system = System(position, species, density, temperature, model; list_type=LinkedList)
     displacement_policy = SimpleGaussian()
     displacement_parameters = ComponentArray(σ=0.1)

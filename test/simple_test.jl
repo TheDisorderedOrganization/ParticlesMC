@@ -1,5 +1,5 @@
 # TEST WITH GERHARD'S CONFIG
-using MCMC
+using MonteCarlo
 using StaticArrays
 using Distributions
 using Random
@@ -45,8 +45,6 @@ NC = length(sp3)
 steps = 1000
 burn = 0
 block = [0, 1, 2, 4, 8]
-sampletimes = scheduler(steps, burn, block)
-callbacks = (callback_energy, callback_acceptance)
 
 # NO SWAPS
 pswap = 0.0
@@ -58,11 +56,22 @@ pools = [(
 ## Empty List
 chains = deepcopy(chains_bkp)
 path = "data/test/particles/KA2D_distribution/N$N/T$temperature/pswap$pswap/M$M"
-simulation = Simulation(chains, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path)
-# run!(simulation, callbacks...)
+sampletimes = build_schedule(steps, burn, block)
+schedulers = [build_schedule(steps, 0, 1), sampletimes, sampletimes, [0, steps], build_schedule(steps, burn, steps ÷ 10)]
+callbacks = (callback_energy, callback_acceptance)
 
-displacement_action = Displacement(0, zero(box))
-@btime mc_step!(system, displacement_action, displacement_policy, displacement_parameters, rng)
+algorithms = (
+    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
+    StoreCallbacks(callbacks, path),
+    StoreTrajectories(chains, path),
+    StoreLastFrames(chains, path),
+    PrintTimeSteps(),
+    )
+simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+run!(simulation)
+
+#displacement_action = Displacement(0, zero(box))
+#@btime mc_step!(system, displacement_action, displacement_policy, displacement_parameters, rng)
 
 # Profile.clear()
 # @profile run!(simulation, callbacks...)

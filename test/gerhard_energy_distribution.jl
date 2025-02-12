@@ -39,10 +39,11 @@ sp3 = findall(isequal(3), species)
 NA = length(sp1)
 NB = length(sp2)
 NC = length(sp3)
-steps = 500
+steps = 1000
 burn = 0
-block = [0, 1, 2, 4, 8]
-sampletimes = scheduler(steps, burn, block)
+block = [0, 10]
+sampletimes = build_schedule(steps, burn, block)
+schedulers = [build_schedule(steps, 0, 1), sampletimes, sampletimes, [0, steps], build_schedule(steps, burn, steps ÷ 10)]
 callbacks = (callback_energy, callback_acceptance)
 
 # NO SWAPS
@@ -55,13 +56,29 @@ pools = [(
 ## Empty List
 chains = deepcopy(chains_bkp)
 path = "data/test/particles/KA2D_distribution/N$N/T$temperature/pswap$pswap/M$M"
-simulation = Simulation(chains, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path)
-#run!(simulation, callbacks...)
+algorithms = (
+    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
+    StoreCallbacks(callbacks, path),
+    StoreTrajectories(chains, path),
+    StoreLastFrames(chains, path),
+    PrintTimeSteps(),
+    )
+simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+run!(simulation)
+
 ## Linked List
 chains = deepcopy(chains_ll_bkp)
 path = "data/test/particles/KA2D_distribution_LL/N$N/T$temperature/pswap$pswap/M$M"
-simulation = Simulation(chains, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path)
-run!(simulation, callbacks...)
+algorithms = (
+    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
+    StoreCallbacks(callbacks, path),
+    StoreTrajectories(chains, path),
+    StoreLastFrames(chains, path),
+    PrintTimeSteps(),
+    )
+simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+run!(simulation)
+
 
 # SWAPS
 pswap = 0.2
@@ -77,13 +94,29 @@ pools = [(
 ## Empty List
 chains = deepcopy(chains_bkp)
 path = "data/test/particles/KA2D_distribution/N$N/T$temperature/pswap$pswap/M$M"
-simulation = Simulation(chains, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path)
-run!(simulation, callbacks...)
+algorithms = (
+    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
+    StoreCallbacks(callbacks, path),
+    StoreTrajectories(chains, path),
+    StoreLastFrames(chains, path),
+    PrintTimeSteps(),
+    )
+simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+run!(simulation)
+
 ## Linked List
 chains = deepcopy(chains_ll_bkp)
 path = "data/test/particles/KA2D_distribution_LL/N$N/T$temperature/pswap$pswap/M$M"
-simulation = Simulation(chains, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path)
-run!(simulation, callbacks...)
+algorithms = (
+    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
+    StoreCallbacks(callbacks, path),
+    StoreTrajectories(chains, path),
+    StoreLastFrames(chains, path),
+    PrintTimeSteps(),
+    )
+simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+run!(simulation)
+
 
 # EB SWAPS
 pswap = 0.1
@@ -101,10 +134,26 @@ pools = [(
 ## Empty List
 chains = deepcopy(chains_bkp)
 path = "data/test/particles/KA2D_distribution/N$N/T$temperature/ebswap$pswap/M$M"
-simulation = Simulation(chains, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path)
-run!(simulation, callbacks...)
+
+algorithms = (
+    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
+    StoreCallbacks(callbacks, path),
+    StoreTrajectories(chains, path),
+    StoreLastFrames(chains, path),
+    PrintTimeSteps(),
+    )
+simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+run!(simulation)
+
 ## Linked List
 chains = deepcopy(chains_ll_bkp)
 path = "data/test/particles/KA2D_distribution_LL/N$N/T$temperature/ebswap$pswap/M$M"
-simulation = Simulation(chains, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, parallel=false, verbose=true, path=path)
-run!(simulation, callbacks...)
+algorithms = (
+    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
+    StoreCallbacks(callbacks, path),
+    StoreTrajectories(chains, path),
+    StoreLastFrames(chains, path),
+    PrintTimeSteps(),
+    )
+simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+run!(simulation)

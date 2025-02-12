@@ -60,10 +60,18 @@ pools = [(
 ## Define the simulation struct
 steps = 1000
 burn = 0
-block = [0, 1, 2, 4, 8, 16, 32, 64, 128]
-sampletimes = scheduler(steps, burn, block)
-path = "data/test/particles/Molecules/T$temperature/N$N/M$M/seed$seed"
-simulation = Simulation(chains, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, store_trajectory=true, parallel=false, verbose=true, path=path)
+sampletimes = build_schedule(steps, burn, block)
+schedulers = [build_schedule(steps, 0, 1), sampletimes, sampletimes, [0, steps], build_schedule(steps, burn, steps ÷ 10)]
 callbacks = (callback_energy, callback_acceptance)
+
+path = "data/test/particles/Molecules/T$temperature/N$N/M$M/seed$seed"
+algorithms = (
+    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
+    StoreCallbacks(callbacks, path),
+    StoreTrajectories(chains, path),
+    StoreLastFrames(chains, path),
+    PrintTimeSteps(),
+    )
 ## Run the simulation :)
-run!(simulation, callbacks...)
+simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+run!(simulation)
