@@ -25,6 +25,7 @@ An abstract base type representing a general interaction model with a continuous
 abstract type ContinuousModel <: Model end
 
 cutoff(si, sj, model::ContinuousModel) = model.rcut * (si + sj) / 2
+cutoff2(si, sj, model::ContinuousModel) = model.rcut2 * (si + sj)^2 / 4
 
 ## POTENTIALS
 harmonic_spheres(r2, epsilon, sigma2) = epsilon * (1 - r2 / sigma2)
@@ -64,10 +65,10 @@ struct SoftSpheres{T<:AbstractArray, N<:Number} <: DiscreteModel
 end
 
 function SoftSpheres(epsilon, sigma, n; rcut=2.5*sigma, name="SoftSpheres$(sigma[2,2]/sigma[1,1])")
-    shift = [inverse_power(rcut[spi, spj], epsilon[spi, spj], sigma[spi, spj], n) for spi in 1:2, spj in 1:2]
     sigma2 = sigma .^ 2
     rcut2 = rcut .^ 2
     ndiv2 = isodd(n) ? n / 2 : n ÷ 2
+    shift = [inverse_power(rcut2[spi, spj], epsilon[spi, spj], sigma2[spi, spj], ndiv2) for spi in 1:2, spj in 1:2]
     return SoftSpheres(name, epsilon, sigma, sigma2, n, ndiv2, rcut, rcut2, shift)
 end
 
@@ -78,7 +79,7 @@ function BHHP()
 end
 
 function potential(r2, spi, spj, model::SoftSpheres)
-    return inverse_power(r2, model.epsilon[spi, spj], model.sigma2[spi, spj], model.n) - model.shift[spi, spj]
+    return inverse_power(r2, model.epsilon[spi, spj], model.sigma2[spi, spj], model.ndiv2) - model.shift[spi, spj]
 end
 
 ###############################################################################
@@ -105,9 +106,9 @@ struct KobAndersen{T<:AbstractArray} <: DiscreteModel
 end
 
 function KobAndersen(epsilon, sigma; rcut=2.5*sigma, name="KA$(size(sigma)[1]-1)")
-    shift = [lennard_jones(rcut[spi, spj], epsilon[spi, spj], sigma[spi, spj]) for spi in axes(sigma, 1), spj in axes(sigma, 1)]
     sigma2 = sigma .^ 2
     rcut2 = rcut .^ 2
+    shift = [lennard_jones(rcut[spi, spj], epsilon[spi, spj], sigma2[spi, spj]) for spi in axes(sigma, 1), spj in axes(sigma, 1)]
     return KobAndersen(name, epsilon, sigma, sigma2, rcut, rcut2, shift)
 end
 
