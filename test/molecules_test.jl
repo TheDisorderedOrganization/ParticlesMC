@@ -66,13 +66,12 @@ schedulers = [build_schedule(steps, 0, 1), sampletimes, sampletimes, [0, steps],
 callbacks = (callback_energy, callback_acceptance)
 
 path = "data/test/particles/Molecules/T$temperature/N$N/M$M/seed$seed"
-algorithms = (
-    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
-    StoreCallbacks(callbacks, path),
-    StoreTrajectories(chains, path),
-    StoreLastFrames(chains, path),
-    PrintTimeSteps(),
-    )
-## Run the simulation :)
-simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+algorithm_list = (
+    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
+    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreTrajectories, scheduler=sampletimes),
+    (algorithm=StoreLastFrames, scheduler=[steps]),
+    (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
+)
+simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
 run!(simulation)

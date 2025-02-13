@@ -57,17 +57,16 @@ pools = [(
 chains = deepcopy(chains_bkp)
 path = "data/test/particles/KA2D_distribution/N$N/T$temperature/pswap$pswap/M$M"
 sampletimes = build_schedule(steps, burn, block)
-schedulers = [build_schedule(steps, 0, 1), sampletimes, sampletimes, [0, steps], build_schedule(steps, burn, steps ÷ 10)]
 callbacks = (callback_energy, callback_acceptance)
 
-algorithms = (
-    Metropolis(chains, pools; sweepstep=N, seed=seed, parallel=false),
-    StoreCallbacks(callbacks, path),
-    StoreTrajectories(chains, path),
-    StoreLastFrames(chains, path),
-    PrintTimeSteps(),
-    )
-simulation = Simulation(chains, algorithms, steps; schedulers=schedulers, path=path, verbose=true)
+algorithm_list = (
+    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
+    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreTrajectories, scheduler=sampletimes),
+    (algorithm=StoreLastFrames, scheduler=[steps]),
+    (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
+)
+simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
 run!(simulation)
 
 #displacement_action = Displacement(0, zero(box))

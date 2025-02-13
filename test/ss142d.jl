@@ -17,7 +17,7 @@ density = 0.5
 box = @SVector fill(typeof(temperature)((N / density)^(1 / d)), d)
 position = [[box .* @SVector rand(rng, d) for i in 1:N] for m in 1:M]
 species = [shuffle!(rng, vcat(ones(Int, NA), 2ones(Int, NB))) for _ in 1:M]
-model = ParticlesMC.BHHP()
+model = BHHP()
 chains = [System(position[m], species[m], density, temperature, model) for m in 1:M]
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.065)
@@ -30,9 +30,16 @@ steps = 10^6
 # block = [0, 1, 2, 4, 8, 16, 32, 64, 128]
 burn = 10^3
 block = [0, burn]
-sampletimes = scheduler(steps, burn, block)
-path = "data/test/particles/SS142D/T$temperature/N$N/M$M/steps$steps/seed$seed"
-simulation = Simulation(chains, pools, steps; sweepstep=N, sampletimes=sampletimes, seed=seed, store_trajectory=true, parallel=true, verbose=true, path=path)
 callbacks = (callback_energy, callback_acceptance)
-## Run the simulation
-run!(simulation, callbacks...)
+
+path = "data/test/particles/SS142D/T$temperature/N$N/M$M/steps$steps/seed$seed"
+sampletimes = build_schedule(steps, burn, block)
+algorithm_list = (
+    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
+    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreTrajectories, scheduler=sampletimes),
+    (algorithm=StoreLastFrames, scheduler=[steps]),
+    (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
+)
+simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
+run!(simulation)

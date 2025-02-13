@@ -38,7 +38,6 @@ using DelimitedFiles
     burn = 0
     block = [0, 1, 2, 4, 8]
     sampletimes = build_schedule(steps, burn, block)
-    schedulers = [build_schedule(steps, 0, 1), sampletimes, sampletimes, [0, steps], build_schedule(steps, burn, steps ÷ 10)]
     callbacks = (callback_energy, callback_acceptance)
 
     # NO SWAPS
@@ -48,32 +47,23 @@ using DelimitedFiles
     pools = [(
         Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1 - pswap),
     ) for _ in 1:M]
-    
-
+    algorithm_list = (
+    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
+    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreTrajectories, scheduler=sampletimes),
+    (algorithm=StoreLastFrames, scheduler=[steps]),
+    (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
+    )
     ## Empty List simulation
     chains_el = [deepcopy(system_el)]
     path_el = "data/noswap/empty_list/"
-    algorithms = (
-        Metropolis(chains_el, pools; sweepstep=N, seed=seed, parallel=false),
-        StoreCallbacks(callbacks, path_el),
-        StoreTrajectories(chains_el, path_el),
-        StoreLastFrames(chains_el, path_el),
-        PrintTimeSteps(),
-        )
-    simulation = Simulation(chains_el, algorithms, steps; schedulers=schedulers, path=path_el, verbose=true)
+    simulation = Simulation(chains_el, algorithm_list, steps; path=path_el, verbose=true)
     run!(simulation)
     
     ## Linked List simulation
     chains_ll = [deepcopy(system_ll)]
     path_ll = "data/noswap/linked_list/"
-    algorithms = (
-        Metropolis(chains_ll, pools; sweepstep=N, seed=seed, parallel=false),
-        StoreCallbacks(callbacks, path_ll),
-        StoreTrajectories(chains_ll, path_ll),
-        StoreLastFrames(chains_ll, path_ll),
-        PrintTimeSteps(),
-        )
-    simulation = Simulation(chains_ll, algorithms, steps; schedulers=schedulers, path=path_ll, verbose=true)
+    simulation = Simulation(chains_ll, algorithm_list, steps; path=path_ll, verbose=true)
     run!(simulation)
 
     ## Read energy data and compare
@@ -94,31 +84,23 @@ using DelimitedFiles
     Move(DiscreteSwap(0, 0, (1, 3), (NA, NC)), swap_policy, swap_parameters, pswap / 2),
     Move(DiscreteSwap(0, 0, (2, 3), (NB, NC)), swap_policy, swap_parameters, pswap / 2),
     ) for _ in 1:M]
-
+    algorithm_list = (
+        (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
+        (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+        (algorithm=StoreTrajectories, scheduler=sampletimes),
+        (algorithm=StoreLastFrames, scheduler=[steps]),
+        (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
+        )
     ## Empty List simulation
     chains_el = [deepcopy(system_el)]
     path_el = "data/swap/empty_list/"
-    algorithms = (
-        Metropolis(chains_el, pools; sweepstep=N, seed=seed, parallel=false),
-        StoreCallbacks(callbacks, path_el),
-        StoreTrajectories(chains_el, path_el),
-        StoreLastFrames(chains_el, path_el),
-        PrintTimeSteps(),
-        )
-    simulation = Simulation(chains_el, algorithms, steps; schedulers=schedulers, path=path_el, verbose=true)
+    simulation = Simulation(chains_el, algorithm_list, steps; path=path_el, verbose=true)
     run!(simulation)
     
     ## Linked List simulation
     chains_ll = [deepcopy(system_ll)]
     path_ll = "data/swap/linked_list/"
-    algorithms = (
-        Metropolis(chains_ll, pools; sweepstep=N, seed=seed, parallel=false),
-        StoreCallbacks(callbacks, path_ll),
-        StoreTrajectories(chains_ll, path_ll),
-        StoreLastFrames(chains_ll, path_ll),
-        PrintTimeSteps(),
-        )
-    simulation = Simulation(chains_ll, algorithms, steps; schedulers=schedulers, path=path_ll, verbose=true)
+    simulation = Simulation(chains_ll, algorithm_list, steps; path=path_ll, verbose=true)
     run!(simulation)
 
     ## Read energy data and compare
