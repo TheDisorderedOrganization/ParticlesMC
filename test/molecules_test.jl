@@ -1,5 +1,6 @@
 using MonteCarlo
 using ParticlesMC
+using ParticlesMC.IO
 using Distributions
 using Random
 using StaticArrays
@@ -22,13 +23,15 @@ for r in position_1
     push!(position, r .- @SVector [0.1, 0.1, 0.1])
 end
 position = Vector{SVector{3,Float64}}(position)
-mol_species = Vector{Tuple{Int, Int, Int, Int}}()
+molecule = Vector{Int}()
 species = Vector{Int}()
 for i in 1:Int(N // Length)
     push!(species, 1)
     push!(species, 2)
     push!(species, 3)
-    push!(mol_species, (1, 3, 3 * (i - 1) + 1, 3 * i))
+    push!(molecule, i)
+    push!(molecule, i)
+    push!(molecule, i)
 end
 
 function create_bond_matrix(N::Int)
@@ -49,7 +52,7 @@ sigma = SMatrix{3, 3, Float64}([0.9 0.95 1.0; 0.95 1.0 1.05; 1.0 1.05 1.1])
 k = SMatrix{3, 3, Float64}([0.0 33.241 30.0; 33.241 0.0 27.210884; 30.0 27.210884 0.0])
 r0 = SMatrix{3, 3, Float64}([0.0 1.425 1.5; 1.425 0.0 1.575; 1.5 1.575 0.0])
 model = GeneralKG(epsilon, sigma, k, r0)
-chains = [System(position, species, mol_species, density, temperature, model, bonds; list_type=LinkedList) for _ in 1:M]
+chains = [System(position, species, molecule, density, temperature, model, bonds; list_type=LinkedList) for _ in 1:M]
 ## Define moves and combine them into M independent pools
 pswap = 0.2
 displacement_policy = SimpleGaussian()
@@ -69,9 +72,9 @@ path = "data/test/particles/Molecules/T$temperature/N$N/M$M/seed$seed"
 algorithm_list = (
     (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
-    (algorithm=StoreTrajectories, scheduler=sampletimes),
-    (algorithm=StoreLastFrames, scheduler=[steps]),
-    (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
-)
+    (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
+    (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
+    (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10), fmt=XYZ())
+    )
 simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
 run!(simulation)

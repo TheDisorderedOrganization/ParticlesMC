@@ -62,7 +62,7 @@ callbacks = (callback_energy, callback_acceptance)
 algorithm_list = (
     (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
-    (algorithm=StoreTrajectories, scheduler=sampletimes),
+    (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ),
     (algorithm=StoreLastFrames, scheduler=[steps]),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
 )
