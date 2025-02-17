@@ -1,6 +1,5 @@
 using MonteCarlo
 using ParticlesMC
-using ParticlesMC.IO
 using Distributions
 using Random
 using StaticArrays

@@ -96,5 +96,6 @@ function load_init_files(init_path; args=Dict(), verbose=false)
 end
 
 include("xyz.jl")
+include("exyz.jl")
 
 end

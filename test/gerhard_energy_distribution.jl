@@ -1,7 +1,6 @@
 # TEST WITH GERHARD'S CONFIG
 using MonteCarlo
 using ParticlesMC
-using ParticlesMC.IO
 using StaticArrays
 using Distributions
 using Random
