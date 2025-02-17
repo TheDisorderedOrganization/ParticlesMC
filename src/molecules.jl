@@ -1,38 +1,34 @@
-using ConcreteStructs
-
 struct Molecules{D,  VS<:AbstractVector, M<:Model, C<:CellList, T<:AbstractFloat} <: Particles
     position::Vector{SVector{D,T}}
     species::VS
-    mol_species::Vector{Tuple{Int, Int, Int, Int}}
+    molecule::VS
+    molecule_species::VS
     density::T
     temperature::T
     model::M
     d::Int
     N::Int
-    N_mol::Int
     box::SVector{D,T}
     local_energy::Vector{T}
     cell_list::C
     cache::Vector{Tuple{Int,T}}
     particle_ids::Base.OneTo{Int}
-    mol_ids::Base.OneTo{Int}
     bonds::Vector{Vector{Int}}
 end
 
 
-function System(position, species, mol_species, density::T, temperature::T, model::Model, bonds; list_type=EmptyList) where {T<:AbstractFloat}
+function System(position, species, molecule, density::T, temperature::T, model::Model, bonds; molecule_species=nothing, list_type=EmptyList) where {T<:AbstractFloat}
     @assert length(position) == length(species)
     particle_ids = eachindex(position)
-    mol_ids = eachindex(mol_species)
     N = length(particle_ids)
-    N_mol = length(mol_ids)
+    molecule_species = something(molecule_species, ones(Int, N))
     d = length(Array(position)[1])
     box = @SVector fill(T((N / density)^(1 / d)), d)
     e_locals = zeros(T, N)
     maxcut = maximum([cutoff(spi, spj, model) for spi in species for spj in species])
     cell_list = list_type(box, maxcut, N)
     cache = Vector{Tuple{Int,T}}()
-    system = Molecules(position, species, mol_species, density, temperature, model, d, N, N_mol, box, e_locals, cell_list, cache, particle_ids, mol_ids, bonds)
+    system = Molecules(position, species, molecule, molecule_species, density, temperature, model, d, N, box, e_locals, cell_list, cache, particle_ids, bonds)
     build_cell_list!(system, system.cell_list)
     system.local_energy .= [local_energy(system, i, cell_list) for i in particle_ids]
     return system
