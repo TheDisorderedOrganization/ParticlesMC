@@ -1,11 +1,14 @@
 module IO
 
-using ..ParticlesMC: Particles, Atoms, Molecules
+using ..ParticlesMC: Particles, Atoms, Molecules, System
+using ..ParticlesMC: fold_back, cutoff, volume_sphere
+using ..ParticlesMC: EmptyList, LinkedList
+using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen
 using MonteCarlo
 using Distributions
 using StaticArrays
 export XYZ, EXYZ, LAMMPS
-export load_configuration, load_init_files
+export load_configuration, load_chains
 
 
 include("xyz.jl")
@@ -35,8 +38,11 @@ function load_configuration(filename::String)
         error("Unsupported file format: $filename")
     end
 end
-    
-function load_init_files(init_path; args=Dict(), verbose=false)
+
+function missing_key_error(key)
+    error(error("$key array has not been found in metadata or is not defined. Define the $key in the args Dict"))
+end
+function load_chains(init_path; args=Dict(), verbose=false)
     input_files = Vector{String}()
     if isfile(init_path)
         push!(input_files, init_path)
@@ -59,9 +65,14 @@ function load_init_files(init_path; args=Dict(), verbose=false)
     @assert all(isequal(N), length.(initial_position_array))
     @assert all(isequal(d), vcat([length.(X) for X in initial_position_array]...))
     initial_density_array = length.(initial_position_array) ./ prod.(initial_box_array)
-    initial_temperature_array = [parse(Float64, split(filter(x -> occursin("T:", x), metadata)[1], ":")[2]) for metadata in metadata_array]
-    input_models = [split(filter(x -> occursin("model:", x), metadata)[1], ":")[2] for metadata in metadata_array]
-    @assert all(isequal(input_models[1]), input_models)
+    if length(metadata_array) > 1
+        initial_temperature_array = [parse(Float64, split(filter(x -> occursin("T:", x), metadata)[1], ":")[2]) for metadata in metadata_array]
+        input_models = [split(filter(x -> occursin("model:", x), metadata)[1], ":")[2] for metadata in metadata_array]
+        @assert all(isequal(input_models[1]), input_models)
+    else
+        initial_temperature_array = nothing
+        input_models = nothing
+    end
     # Update density, temperature and model if needed
     if haskey(args, "density") && !isnothing(args["density"])
         λs = (initial_density_array ./ args["density"]) .^ (1 / d)
@@ -70,10 +81,14 @@ function load_init_files(init_path; args=Dict(), verbose=false)
         initial_box_array .= [box .* λ for (box, λ) in zip(initial_box_array, λs)]
     end
     if haskey(args, "temperature") && !isnothing(args["temperature"])
-        initial_temperature_array .= args["temperature"]
+        initial_temperature_array = args["temperature"]
+    elseif isnothing(initial_temperature_array)
+        missing_key_error("temperature")
     end
     if haskey(args, "model") && !isnothing(args["model"])
-        input_models .= args["model"]
+        input_models = args["model"]
+    elseif isnothing(input_models)
+        missing_key_error("model")
     end
     # Fold back into the box
     initial_position_array .= [[fold_back(x, box) for x in X] for (X, box) in zip(initial_position_array, initial_box_array)]
@@ -96,6 +111,7 @@ function load_init_files(init_path; args=Dict(), verbose=false)
     list_type = Z / N < 0.1 ? LinkedList : EmptyList
     if haskey(args, "list_type") && !isnothing(args["list_type"])
         list_type = eval(Meta.parse(args["list_type"]))
+        println("Using $list_type as cell list type")
     end
     # Create independent chains
     chains = [System(initial_position_array[k], initial_species_array[k], initial_density_array[k], initial_temperature_array[k], model, list_type=list_type) for k in eachindex(initial_position_array)]
