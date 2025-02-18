@@ -8,14 +8,15 @@ using DelimitedFiles
 
 @testset "Potential energy test" begin
     # Test inital configuration
-    species, position, box, metadata = load_configuration("test/config_0.xyz", LAMMPS())
-    println(box)
-    temperature = 0.231
-    N = length(position)
-    L = box[1]
-    density = N / L^2
-    system_el = System(position, species, density, temperature, JBB())
-    system_ll = System(position, species, density, temperature, JBB(); list_type=LinkedList)
+    chains_el = load_chains("config_0.lmp", args=Dict("temperature" => [0.231], "model" => ["JBB"], "list_type" => "EmptyList"))
+    chains_ll = load_chains("config_0.lmp", args=Dict("temperature" => [0.231], "model" => ["JBB"], "list_type" => "LinkedList"))
+    system_el = chains_el[1]
+    system_ll = chains_ll[1]
+    @test system_el.N == system_ll.N
+    @test system_el.d == system_ll.d
+    @test system_el.temperature == system_ll.temperature
+    @test all.(system_el.position == system_ll.position)
+    @test all.(system_el.species == system_ll.species)
     energy_el = mean(system_el.local_energy) / 2
     energy_ll = mean(system_ll.local_energy) / 2
     @test isapprox(energy_el, -2.676832, atol=1e-6)
@@ -24,7 +25,7 @@ using DelimitedFiles
     # Test simulation energy
     M = 1
     seed = 10
-    sp1, sp2, sp3 = findall(isequal(1), species), findall(isequal(2), species), findall(isequal(3), species)
+    sp1, sp2, sp3 = findall(isequal(1), system_el.species), findall(isequal(2), system_el.species), findall(isequal(3), system_el.species)
     NA, NB, NC = length(sp1), length(sp2), length(sp3)
     steps = 100
     burn = 0
@@ -37,10 +38,10 @@ using DelimitedFiles
     displacement_policy = SimpleGaussian()
     displacement_parameters = ComponentArray(σ=0.05)
     pools = [(
-        Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1 - pswap),
+        Move(Displacement(0, zero(system_el.box)), displacement_policy, displacement_parameters, 1 - pswap),
     ) for _ in 1:M]
     algorithm_list = (
-    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
+    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=system_el.N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes),
     (algorithm=StoreLastFrames, scheduler=[steps]),
@@ -72,12 +73,12 @@ using DelimitedFiles
     swap_policy = DoubleUniform()
     swap_parameters = Vector{Float64}()
     pools = [(
-    Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1 - pswap),
+    Move(Displacement(0, zero(system_el.box)), displacement_policy, displacement_parameters, 1 - pswap),
     Move(DiscreteSwap(0, 0, (1, 3), (NA, NC)), swap_policy, swap_parameters, pswap / 2),
     Move(DiscreteSwap(0, 0, (2, 3), (NB, NC)), swap_policy, swap_parameters, pswap / 2),
     ) for _ in 1:M]
     algorithm_list = (
-        (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
+        (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=system_el.N),
         (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
