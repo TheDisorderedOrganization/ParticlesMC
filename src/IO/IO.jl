@@ -3,8 +3,14 @@ module IO
 using ..ParticlesMC: Particles, Atoms, Molecules
 using MonteCarlo
 using Distributions
-export XYZ, EXYZ
+using StaticArrays
+export XYZ, EXYZ, LAMMPS
 export load_configuration, load_init_files
+
+
+include("xyz.jl")
+include("exyz.jl")
+include("lammps.jl")
 
 function MonteCarlo.write_system(io, system::Particles)
     println(io, "\tNumber of particles: $(system.N)")
@@ -17,12 +23,14 @@ function MonteCarlo.write_system(io, system::Particles)
     return nothing
 end
 
-function load_configuration(filename::String, mode::String="r")
-    io = open(filename, mode)  # Open file as IOStream
+function load_configuration(filename::String)
+    io = open(filename, "r")  # Open file as IOStream
     if endswith(filename, ".xyz")
         return load_configuration(io, XYZ())
     elseif endswith(filename, ".exyz")
         return load_configuration(io, EXYZ())
+    elseif endswith(filename, ".lmp") || endswith(filename, ".lammpstrj") || endswith(filename, ".lammps")
+        return load_configuration(io, LAMMPS())
     else
         error("Unsupported file format: $filename")
     end
@@ -95,7 +103,6 @@ function load_init_files(init_path; args=Dict(), verbose=false)
     return chains
 end
 
-include("xyz.jl")
-include("exyz.jl")
+
 
 end

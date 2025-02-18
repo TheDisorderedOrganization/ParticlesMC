@@ -26,7 +26,7 @@ export SimpleGaussian, DoubleUniform, EnergyBias
 export sample_action!, log_proposal_density, reward, invert_action!, delta_log_target_density
 export perform_action!, perform_action_cached!
 include("IO/IO.jl")
-using .IO: XYZ, EXYZ
-export XYZ, EXYZ
+using .IO: XYZ, EXYZ, LAMMPS, load_configuration, load_init_files
+export XYZ, EXYZ, LAMMPS, load_configuration, load_init_files
 
 end
