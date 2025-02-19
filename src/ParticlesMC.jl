@@ -25,6 +25,8 @@ export fold_back, System
 export SimpleGaussian, DoubleUniform, EnergyBias
 export sample_action!, log_proposal_density, reward, invert_action!, delta_log_target_density
 export perform_action!, perform_action_cached!
-export load_configuration, load_init_files
+include("IO/IO.jl")
+using .IO: XYZ, EXYZ, LAMMPS, load_configuration, load_chains
+export XYZ, EXYZ, LAMMPS, load_configuration, load_chains
 
 end
