@@ -23,16 +23,16 @@ jobs:
     - name: Cache Julia packages  
       uses: julia-actions/cache@v2  
 
-    - name: Build package  
-      uses: julia-actions/julia-buildpkg@v1  
-
     - name: Install dependencies  
-      run: julia --project=. -e 'using Pkg; Pkg.add(PackageSpec(url="https://github.com/TheDisorderedOrganization/MonteCarlo.git"))'
+      run: | 
+        julia --project=. -e 'using Pkg; 
+          Pkg.add(PackageSpec(url="https://github.com/TheDisorderedOrganization/MonteCarlo.git"));
+          Pkg.instantiate()'  
 
     - name: Run tests with coverage  
-      uses: julia-actions/julia-runtest@v1  
-      with:
-        coverage: true  
+      run: | 
+        julia --project=. -e 'using Pkg; 
+          Pkg.test(coverage=true)'  
 
     - name: Process coverage  
       uses: julia-actions/julia-processcoverage@v1  
