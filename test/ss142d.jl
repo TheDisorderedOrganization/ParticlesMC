@@ -24,7 +24,6 @@ displacement_parameters = ComponentArray(σ=0.065)
 pools = [(
     Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
 ) for _ in 1:M]
-## Define the simulation struct
 steps = 10^6
 # burn = 100
 # block = [0, 1, 2, 4, 8, 16, 32, 64, 128]
