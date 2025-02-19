@@ -10,7 +10,6 @@ using StaticArrays
 export XYZ, EXYZ, LAMMPS
 export load_configuration, load_chains
 
-
 include("xyz.jl")
 include("exyz.jl")
 include("lammps.jl")
@@ -42,6 +41,7 @@ end
 function missing_key_error(key)
     error(error("$key array has not been found in metadata or is not defined. Define the $key in the args Dict"))
 end
+
 function load_chains(init_path; args=Dict(), verbose=false)
     input_files = Vector{String}()
     if isfile(init_path)
@@ -111,8 +111,8 @@ function load_chains(init_path; args=Dict(), verbose=false)
     list_type = Z / N < 0.1 ? LinkedList : EmptyList
     if haskey(args, "list_type") && !isnothing(args["list_type"])
         list_type = eval(Meta.parse(args["list_type"]))
-        println("Using $list_type as cell list type")
     end
+    verbose && println("Using $list_type as cell list type")
     # Create independent chains
     chains = [System(initial_position_array[k], initial_species_array[k], initial_density_array[k], initial_temperature_array[k], model, list_type=list_type) for k in eachindex(initial_position_array)]
     verbose && println("$(length(chains)) chains created")
