@@ -26,6 +26,9 @@ jobs:
     - name: Build package  
       uses: julia-actions/julia-buildpkg@v1  
 
+    - name: Install dependencies  
+      run: julia --project=. -e 'using Pkg; Pkg.add(PackageSpec(url="https://github.com/TheDisorderedOrganization/MonteCarlo.git"))'
+
     - name: Run tests with coverage  
       uses: julia-actions/julia-runtest@v1  
       with:
