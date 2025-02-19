@@ -77,7 +77,7 @@ function MonteCarlo.invert_action!(action::Displacement, ::Particles)
     return nothing
 end
 
-function reward(action::Displacement, ::Particles)
+function MonteCarlo.PolicyGuided.reward(action::Displacement, ::Particles)
     return norm(action.δ)^ 2
 end
 
@@ -141,7 +141,7 @@ function MonteCarlo.invert_action!(action::DiscreteSwap, ::Particles)
     return nothing
 end
 
-function reward(::DiscreteSwap, system::Particles)
+function MonteCarlo.PolicyGuided.reward(::DiscreteSwap, system::Particles)
     return one(typeof(system.temperature))
 end
 
