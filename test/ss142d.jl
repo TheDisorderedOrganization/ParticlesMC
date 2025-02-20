@@ -21,9 +21,9 @@ model = BHHP()
 chains = [System(position[m], species[m], density, temperature, model) for m in 1:M]
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.065)
-pools = [(
+pool = (
     Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
-) for _ in 1:M]
+)
 steps = 10^6
 # burn = 100
 # block = [0, 1, 2, 4, 8, 16, 32, 64, 128]
@@ -34,7 +34,7 @@ callbacks = (callback_energy, callback_acceptance)
 path = "data/test/particles/SS142D/T$temperature/N$N/M$M/steps$steps/seed$seed"
 sampletimes = build_schedule(steps, burn, block)
 algorithm_list = (
-    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
+    (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes),
     (algorithm=StoreLastFrames, scheduler=[steps]),

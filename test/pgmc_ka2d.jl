@@ -28,11 +28,11 @@ swap_AC_policy = EnergyBias()
 swap_BC_policy = EnergyBias()
 swap_AC_parameters = ComponentArray(θ₁=0.0, θ₂=0.0)
 swap_BC_parameters = ComponentArray(θ₁=0.0, θ₂=0.0)
-pools = [(
+pool = (
     Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1 - pswap),
     Move(DiscreteSwap(0, 0, (1, 3), (NA, NC)), swap_AC_policy, swap_AC_parameters, pswap / 2),
     Move(DiscreteSwap(0, 0, (2, 3), (NB, NC)), swap_BC_policy, swap_BC_parameters, pswap / 2),
-) for _ in 1:M]
+)
 optimisers = (VPG(1e-3), BLANPG(1e-6, 1e-6), BLANPG(1e-6, 1e-6))
 # optimisers = (VPG(1e-5), VPG(1e-2), VPG(1e-2))
 steps = 50000
@@ -44,12 +44,12 @@ callbacks = (callback_energy, callback_acceptance)
 path = "data/test/pgmc/KA2D/T$temperature/N$N/M$M/steps$steps/seed$seed"
 sampletimes = build_schedule(steps, burn, block)
 algorithm_list = (
-    (algorithm=Metropolis, pools=pools, seed=seed, parallel=true, sweepstep=N),
-    (algorithm=PolicyGradientEstimator, pools=pools, optimisers=optimisers, seed=seed, q_batch_size=10, parallel=true),
+    (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
+    (algorithm=PolicyGradientEstimator, dependencies=(Metropolis,), optimisers=optimisers, q_batch_size=10, parallel=true),
     (algorithm=PolicyGradientUpdate, dependencies=(PolicyGradientEstimator,), scheduler=build_schedule(steps, burn, 2)),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes),
-    (algorithm=StoreParameters, pools=pools, scheduler=sampletimes),
+    (algorithm=StoreParameters, dependencies=(Metropolis,), scheduler=sampletimes),
     (algorithm=StoreLastFrames, scheduler=[steps]),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
 )

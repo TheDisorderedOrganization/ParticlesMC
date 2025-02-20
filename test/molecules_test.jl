@@ -52,13 +52,13 @@ k = SMatrix{3, 3, Float64}([0.0 33.241 30.0; 33.241 0.0 27.210884; 30.0 27.21088
 r0 = SMatrix{3, 3, Float64}([0.0 1.425 1.5; 1.425 0.0 1.575; 1.5 1.575 0.0])
 model = GeneralKG(epsilon, sigma, k, r0)
 chains = [System(position, species, molecule, density, temperature, model, bonds; list_type=LinkedList) for _ in 1:M]
-## Define moves and combine them into M independent pools
+## Define moves and combine them into a pool
 pswap = 0.2
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.05)
-pools = [(
+pool = (
     Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
-) for _ in 1:M]
+)
 ## Define the simulation struct
 steps = 1000
 burn = 0
@@ -69,7 +69,7 @@ callbacks = (callback_energy, callback_acceptance)
 
 path = "data/test/particles/Molecules/T$temperature/N$N/M$M/seed$seed"
 algorithm_list = (
-    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=N),
+    (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
     (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),

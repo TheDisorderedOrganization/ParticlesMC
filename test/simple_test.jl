@@ -35,9 +35,9 @@ block = [0, 1, 2, 4, 8]
 pswap = 0.0
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.05)
-pools = [(
+pool = (
     Move(Displacement(0, zero(system.box)), displacement_policy, displacement_parameters, 1 - pswap),
-) for _ in 1:M]
+) 
 ## Empty List
 chains = deepcopy(chains_bkp)
 path = "data/test/particles/KA2D_distribution/N$N/T$temperature/pswap$pswap/M$M"
@@ -45,7 +45,7 @@ sampletimes = build_schedule(steps, burn, block)
 callbacks = (callback_energy, callback_acceptance)
 
 algorithm_list = (
-    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=system.N),
+    (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system.N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ),
     (algorithm=StoreLastFrames, scheduler=[steps]),
