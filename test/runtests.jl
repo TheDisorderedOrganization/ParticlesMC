@@ -37,11 +37,11 @@ using DelimitedFiles
     pswap = 0.0
     displacement_policy = SimpleGaussian()
     displacement_parameters = ComponentArray(σ=0.05)
-    pools = [(
+    pool = (
         Move(Displacement(0, zero(system_el.box)), displacement_policy, displacement_parameters, 1 - pswap),
-    ) for _ in 1:M]
+    )
     algorithm_list = (
-    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=system_el.N),
+    (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes),
     (algorithm=StoreLastFrames, scheduler=[steps]),
@@ -72,13 +72,13 @@ using DelimitedFiles
     displacement_parameters = ComponentArray(σ=0.05)
     swap_policy = DoubleUniform()
     swap_parameters = Vector{Float64}()
-    pools = [(
+    pool = (
     Move(Displacement(0, zero(system_el.box)), displacement_policy, displacement_parameters, 1 - pswap),
     Move(DiscreteSwap(0, 0, (1, 3), (NA, NC)), swap_policy, swap_parameters, pswap / 2),
     Move(DiscreteSwap(0, 0, (2, 3), (NB, NC)), swap_policy, swap_parameters, pswap / 2),
-    ) for _ in 1:M]
+    )
     algorithm_list = (
-        (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=system_el.N),
+        (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
         (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),

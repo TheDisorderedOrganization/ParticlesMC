@@ -98,13 +98,13 @@ swap_AC_policy = EnergyBias()
 swap_BC_policy = EnergyBias()
 swap_AC_parameters = ComponentArray(θ₁=1.0, θ₂=0.5)
 swap_BC_parameters = ComponentArray(θ₁=0.5, θ₂=4.0)
-pools = [(
+pool = (
     Move(Displacement(0, zero(system.box)), displacement_policy, displacement_parameters, 1 - pswap),
     Move(DiscreteSwap(0, 0, (1, 3), (NA, NC)), swap_AC_policy, swap_AC_parameters, pswap / 2),
     Move(DiscreteSwap(0, 0, (2, 3), (NB, NC)), swap_BC_policy, swap_BC_parameters, pswap / 2),
-) for _ in 1:M]
+)
 algorithm_list = (
-    (algorithm=Metropolis, pools=pools, seed=seed, parallel=false, sweepstep=system.N),
+    (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system.N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes),
     (algorithm=StoreLastFrames, scheduler=[steps]),
