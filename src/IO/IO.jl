@@ -125,16 +125,21 @@ function formatted_string(num::Real, digits::Integer)
     return Printf.format(fmt, num)
 end
 
+function write_position(io, position, digits::Int)
+    for position_i in position 
+        formatted_position_i = formatted_string(position_i, digits)
+        print(io, " ")
+        print(io, formatted_position_i)
+    end
+    println(io)
+    return nothing
+end
+
 function MonteCarlo.store_trajectory(io, system::Atoms, t, format::MonteCarlo.Format, digits::Integer=6)
     write_header(io, system, t, format, digits)
     for (species, position) in zip(system.species, system.position)
         print(io, "$species")
-        for position_i in position 
-            formatted_position_i = formatted_string(position_i, digits)
-            print(io, " ")
-            print(io, formatted_position_i)
-        end
-        println(io)
+        write_position(io, position, digits)
     end
     return nothing
 end
@@ -143,12 +148,7 @@ function MonteCarlo.store_trajectory(io, system::Molecules, t, format::MonteCarl
     write_header(io, system, t, format, digits)
     for (molecule, species, position) in zip(system.molecule, system.species, system.position)
         print(io, "$molecule $species")
-        for position_i in position 
-            formatted_position_i = formatted_string(position_i, digits)
-            print(io, " ")
-            print(io, formatted_position_i)
-        end
-        println(io)
+        write_position(io, position, digits)
     end
     return nothing
 end

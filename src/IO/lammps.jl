@@ -64,5 +64,5 @@ function write_header(io, system::Particles, t, format::LAMMPS, digits::Integer)
     elseif system.d == 3
         println(io, "ITEM: ATOMS $(get_system_column(system, format)) type x y z")
     end
-    return nothhing
+    return nothing
 end
