@@ -43,8 +43,8 @@ using DelimitedFiles
     algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
-    (algorithm=StoreTrajectories, scheduler=sampletimes),
-    (algorithm=StoreLastFrames, scheduler=[steps]),
+    (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=EXYZ()),
+    (algorithm=StoreLastFrames, scheduler=[steps], fmt=LAMMPS()),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
     )
     ## Empty List simulation
