@@ -5,7 +5,7 @@ struct XYZ <: MonteCarlo.Format
     end
 end
 
-function load_configuration(io, format::XYZ; m=-1)
+function load_configuration(io, format::XYZ; m=1)
     data = readlines(io)  
     N = parse(Int, data[1])  # Number of atoms or entries
     metadata = split(data[2], " ")  # Metadata split into an array
@@ -20,7 +20,7 @@ function load_configuration(io, format::XYZ; m=-1)
     selrow = m ≥ 0 ? (N + 2) * m - N + 1 : length(data) + m * (N + 2) + 3
     frame = data[selrow:selrow+N-1]
 
-    # Determine species type dynamically
+    # Determine species type dynamically  
     sT = typeof(eval(Meta.parse(join(split(frame[1], " ")[1:end-d], " "))))
     species = Vector{sT}(undef, N)
     position = Vector{SVector{d, Float64}}(undef, N)
@@ -33,32 +33,18 @@ function load_configuration(io, format::XYZ; m=-1)
     return species, position, box, metadata
 end
 
-function MonteCarlo.store_trajectory(io, system::Atoms, t, format::XYZ)
-    println(io, system.N)
-    box = replace(replace(string(system.box), r"[\[\]]" => ""), r",\s+" => ",")
-    println(io, "step:$t columns:species,position dt:1 cell:$(box) rho:$(system.density) T:$(system.temperature) model:$(system.model.name) potential_energy_per_particle:$(mean(system.local_energy)/2)")
-    for (i, p) in enumerate(system.position)
-        print(io, "$(system.species[i])")
-        for a in 1:system.d
-            print(io, " $(p[a])")
-        end
-        println(io)
-    end
-    return nothing
+function get_system_column(system::Atoms, ::XYZ)
+    return ""
 end
 
-function MonteCarlo.store_trajectory(io, system::Molecules, t, format::XYZ)
+function get_system_column(system::Molecules, ::XYZ)
+    return "molecule,"
+end
+
+function write_header(io, system::Particles, t, format::XYZ, digits::Integer)
     println(io, system.N)
     box = replace(replace(string(system.box), r"[\[\]]" => ""), r",\s+" => ",")
-    println(io, "step:$t columns:molecule,species,position dt:1 cell:$(box) rho:$(system.density) T:$(system.temperature) model:$(system.model.name) potential_energy_per_particle:$(mean(system.local_energy)/2)")
-    for (i, p) in enumerate(system.position)
-        print(io, "$(system.molecule[i])")
-        print(io, "$(system.species[i])")
-        for a in 1:system.d
-            print(io, " $(p[a])")
-        end
-        println(io)
-    end
+    println(io, "step:$t columns:$(get_system_column(system, format))species,position dt:1 cell:$(box) rho:$(system.density) T:$(system.temperature) model:$(system.model.name) potential_energy_per_particle:$(mean(system.local_energy)/2)")
     return nothing
 end
 

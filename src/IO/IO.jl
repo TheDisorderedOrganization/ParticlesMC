@@ -5,8 +5,8 @@ using ..ParticlesMC: fold_back, cutoff, volume_sphere
 using ..ParticlesMC: EmptyList, LinkedList
 using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen
 using MonteCarlo
-using Distributions
-using StaticArrays
+using Distributions, LinearAlgebra, StaticArrays, Printf
+using DataStructures: OrderedDict
 export XYZ, EXYZ, LAMMPS
 export load_configuration, load_chains
 
@@ -119,6 +119,39 @@ function load_chains(init_path; args=Dict(), verbose=false)
     return chains
 end
 
+function formatted_string(num::Real, digits::Integer)
+    fmtstr = "%." * string(digits) * "f"
+    fmt = Printf.Format(fmtstr)
+    return Printf.format(fmt, num)
+end
+
+function MonteCarlo.store_trajectory(io, system::Atoms, t, format::MonteCarlo.Format, digits::Integer=6)
+    write_header(io, system, t, format, digits)
+    for (species, position) in zip(system.species, system.position)
+        print(io, "$species")
+        for position_i in position 
+            formatted_position_i = formatted_string(position_i, digits)
+            print(io, " ")
+            print(io, formatted_position_i)
+        end
+        println(io)
+    end
+    return nothing
+end
+
+function MonteCarlo.store_trajectory(io, system::Molecules, t, format::MonteCarlo.Format, digits::Integer=6)
+    write_header(io, system, t, format, digits)
+    for (molecule, species, position) in zip(system.molecule, system.species, system.position)
+        print(io, "$molecule $species")
+        for position_i in position 
+            formatted_position_i = formatted_string(position_i, digits)
+            print(io, " ")
+            print(io, formatted_position_i)
+        end
+        println(io)
+    end
+    return nothing
+end
 
 
 end

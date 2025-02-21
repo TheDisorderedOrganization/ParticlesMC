@@ -39,7 +39,15 @@ function load_configuration(io, format::LAMMPS; m=-1)
     return species, position, box, []
 end
 
-function MonteCarlo.store_trajectory(io, system::Atoms, t, format::LAMMPS)
+function get_system_column(system::Atoms, ::LAMMPS)
+    return ""
+end
+
+function get_system_column(system::Molecules, ::LAMMPS)
+    return "molecule"
+end
+
+function write_header(io, system::Particles, t, format::LAMMPS, digits::Integer)
     println(io, "ITEM: TIMESTEP")
     println(io, t)
     println(io, "ITEM: NUMBER OF ATOMS")
@@ -49,31 +57,12 @@ function MonteCarlo.store_trajectory(io, system::Atoms, t, format::LAMMPS)
         println(io, "0.0 $(system.box[i])")
     end
     if system.d == 2
-        println(io, "ITEM: ATOMS type x y")
+        println(io, "-0.1 0.1")
+    end
+    if system.d == 2
+        println(io, "ITEM: ATOMS $(get_system_column(system, format)) type x y")
     elseif system.d == 3
-        println(io, "ITEM: ATOMS type x y z")
+        println(io, "ITEM: ATOMS $(get_system_column(system, format)) type x y z")
     end
-    for (i, p) in enumerate(system.position)
-        println(io, "$(system.species[i])")
-        for pos in p
-             print(" $pos")
-        end
-    end
-    return nothing
-end
-
-function MonteCarlo.store_trajectory(io, system::Molecules, t, format::LAMMPS)
-    println(io, "ITEM: TIMESTEP")
-    println(io, t)
-    println(io, "ITEM: NUMBER OF ATOMS")
-    println(io, system.N)
-    println(io, "ITEM: BOX BOUNDS pp pp pp")
-    for i in 1:system.d
-        println(io, "0.0 $(system.box[i])")
-    end
-    println(io, "ITEM: ATOMS molecule type x y z")
-    for (i, p) in enumerate(system.position)
-        println(io, "$(system.molecule[i]) $(system.species[i]) $(p[1]) $(p[2]) $(p[3])")
-    end
-    return nothing
+    return nothhing
 end
