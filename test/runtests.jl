@@ -8,7 +8,7 @@ using DelimitedFiles
 
 @testset "Potential energy test" begin
     # Test inital configuration
-    chains_el = load_chains("config_0.lmp", args=Dict("temperature" => [0.231], "model" => ["JBB"], "list_type" => "EmptyList"))
+    chains_el = load_chains("config_0.exyz", args=Dict("temperature" => [0.231], "model" => ["JBB"], "list_type" => "EmptyList"))
     chains_ll = load_chains("config_0.lmp", args=Dict("temperature" => [0.231], "model" => ["JBB"], "list_type" => "LinkedList"))
     system_el = chains_el[1]
     system_ll = chains_ll[1]
