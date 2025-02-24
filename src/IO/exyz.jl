@@ -5,15 +5,15 @@ struct EXYZ <: MonteCarlo.Format
     end
 end
 
-function parse_properties_string(properties_str::AbstractString)
-    properties = split(properties_str, ":")
+function parse_column_string(column_str::AbstractString, ::EXYZ)
+    columns = split(column_str, ":")
     column_info = OrderedDict{String, Vector}() # Use OrderedDict to maintain order
     i, index = 1, 1
     types = ["S", "I", "R"]
-    while i <= length(properties)
-        if i + 2 <= length(properties) && (properties[i+1] ∈ types)
-          column_name = properties[i]
-          dimension = parse(Int, properties[i + 2])
+    while i <= length(columns)
+        if i + 2 <= length(columns) && (columns[i+1] ∈ types)
+          column_name = columns[i]
+          dimension = parse(Int, columns[i + 2])
           column_info[column_name] = [dimension, index]
           index += dimension
           i += 3 # Skip data type and dimension
@@ -25,8 +25,7 @@ function parse_properties_string(properties_str::AbstractString)
     return column_info
 end
 
-function load_configuration(io, format::EXYZ; m=1)
-    data = readlines(io)
+function read_header(data, format::EXYZ)
     N = parse(Int, data[1])
     metadata_line = data[2]
     mat = match(r"Lattice=\"(.*?)\"", metadata_line)
@@ -42,36 +41,14 @@ function load_configuration(io, format::EXYZ; m=1)
     end
     lattice_matrix = reshape(lattice_values, 3, 3)
     box = lattice_matrix[diagind(lattice_matrix)]
+    column_match = match(r"Properties=(.*)", metadata_line)
+    column_str = mat === nothing ? nothing : column_match.captures[1]
+    column_info =  parse_column_string(column_str, format)
+    return N, box, column_info, []
+end
 
-    selrow = m ≥ 0 ? (N + 2) * m - N + 1 : length(data) + m * (N + 2) + 3
-    frame = data[selrow:selrow+N-1]
-
-    sT = typeof(eval(Meta.parse(split(frame[1], " ")[1])))
-    mat = match(r"Properties=(.*)", metadata_line)
-    properties_str = mat === nothing ? nothing : mat.captures[1]
-    properties =  parse_properties_string(properties_str)
-    if "species" in keys(properties)
-        species_d, species_index = properties["species"]
-        if species_d > 1
-            error("Species dimension must be 1")
-        end
-        species = Vector{sT}(undef, N)
-    end
-    if "pos" in keys(properties)
-        pos_d, pos_index = properties["pos"]
-        position = Vector{SVector{pos_d, Float64}}(undef, N)
-    else
-        missing_key_error("pos")
-    end
-    if pos_d < length(box)
-        box = box[1:pos_d]
-    end
-    for i in eachindex(frame)
-        split_line = split(frame[i], " ")
-        species[i] = eval(Meta.parse.(split_line[species_index:species_index+species_d-1])[1])
-        position[i] = SVector{pos_d}(parse.(Float64, split_line[pos_index:pos_index+pos_d-1]))
-    end
-    return species, position, box, []
+function get_selrow(::EXYZ, N, m)
+    return m ≥ 0 ? (N + 2) * m - N + 1 : length(data) + m * (N + 2) + 3
 end
 
 function compute_box_str(box, ::EXYZ)
@@ -96,6 +73,6 @@ end
 function write_header(io, system::Particles, t, format::EXYZ, digits::Integer)
     println(io, system.N)
     box_str = compute_box_str(system.box, format)
-    println(io, "Lattice=\"$box_str\" Properties=:$(get_system_column(system, format)):species:I:1:pos:R:$(system.d) Time=$t")
+    println(io, "Lattice=\"$box_str\" Properties=:$(get_system_column(system, format)):species:S:1:pos:R:$(system.d) Time=$t")
     return nothing
 end

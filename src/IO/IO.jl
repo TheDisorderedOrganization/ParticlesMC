@@ -38,6 +38,59 @@ function load_configuration(filename::String)
     end
 end
 
+function load_configuration(io, format::MonteCarlo.Format; m=1)
+    data = readlines(io)
+    N, box, column_info = read_header(data, format)
+    selrow = get_selrow(format, N, m)
+    frame = data[selrow:selrow+N-1]
+    bool_molecule = "molecule" in keys(column_info)
+    bool_species = "species" in keys(column_info)
+    if bool_molecule
+        if m != 1
+            error("For molecular systems the frame index has to be equal to 1")
+        end
+        molecule_d, molecule_index = column_info["molecule"]
+        if molecule_d != 1
+            error("molecule dimension must be 1")
+        end
+        molecule = Vector{Int}(undef, N)
+    end
+    if bool_species
+        species_d, species_index = column_info["species"]
+        if species_d != 1
+            error("Species dimension must be 1")
+        end
+        sT = typeof(eval(Meta.parse(split(frame[1], " ")[1])))
+        species = Vector{sT}(undef, N)
+    else
+        species = ones(Int, N)
+    end
+    if "pos" in keys(column_info)
+        pos_d, pos_index = column_info["pos"]
+        position = Vector{SVector{pos_d, Float64}}(undef, N)
+    else
+        missing_key_error("pos")
+    end
+    if pos_d < length(box)
+        box = box[1:pos_d]
+    end
+    for i in eachindex(frame)
+        split_line = split(frame[i], " ")
+        if bool_species
+            species[i] = eval(Meta.parse.(split_line[species_index]))
+        end
+        if bool_molecule
+            molecule[i] = parse.(Int64, split_line[molecule_index])
+        end
+        position[i] = SVector{pos_d}(parse.(Float64, split_line[pos_index:pos_index+pos_d-1]))
+    end
+    if bool_molecule
+        return molecule, species, position, box, []
+    else
+        return nothing, species, position, box, []
+    end
+end
+
 function missing_key_error(key)
     error(error("$key array has not been found in metadata or is not defined. Define the $key in the args Dict"))
 end
@@ -56,10 +109,11 @@ function load_chains(init_path; args=Dict(), verbose=false)
     verbose && println("Processing $(length(input_files)) configuration file(s)")
     verbose && @show input_files
     input_data = load_configuration.(input_files)
-    initial_species_array = getindex.(input_data, 1)
-    initial_position_array = getindex.(input_data, 2)
-    initial_box_array = getindex.(input_data, 3)
-    metadata_array = getindex.(input_data, 4)
+    initial_molecule_array =  getindex.(input_data, 1)
+    initial_species_array = getindex.(input_data, 2)
+    initial_position_array = getindex.(input_data, 3)
+    initial_box_array = getindex.(input_data, 4)
+    metadata_array = getindex.(input_data, 5)
     N = first(length.(initial_position_array))
     d = first(length.(first(initial_position_array)))
     @assert all(isequal(N), length.(initial_position_array))
@@ -135,7 +189,7 @@ function write_position(io, position, digits::Int)
     return nothing
 end
 
-function MonteCarlo.store_trajectory(io, system::Atoms, t, format::MonteCarlo.Format, digits::Integer=6)
+function MonteCarlo.store_trajectory(io, system::Atoms, t, format::MonteCarlo.Format; digits::Integer=6)
     write_header(io, system, t, format, digits)
     for (species, position) in zip(system.species, system.position)
         print(io, "$species")
@@ -144,7 +198,7 @@ function MonteCarlo.store_trajectory(io, system::Atoms, t, format::MonteCarlo.Fo
     return nothing
 end
 
-function MonteCarlo.store_trajectory(io, system::Molecules, t, format::MonteCarlo.Format, digits::Integer=6)
+function MonteCarlo.store_trajectory(io, system::Molecules, t, format::MonteCarlo.Format; digits::Integer=6)
     write_header(io, system, t, format, digits)
     for (molecule, species, position) in zip(system.molecule, system.species, system.position)
         print(io, "$molecule $species")
