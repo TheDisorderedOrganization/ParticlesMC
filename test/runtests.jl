@@ -105,3 +105,69 @@ using DelimitedFiles
 
 
 end
+
+@testset "Molecule potential energy test" begin
+    # Test inital configuration
+    epsilon = SMatrix{3, 3, Float64}([1.0 1.0 1.0; 1.0 1.0 1.0; 1.0 1.0 1.0])
+    sigma = SMatrix{3, 3, Float64}([0.9 0.95 1.0; 0.95 1.0 1.05; 1.0 1.05 1.1])
+    k = SMatrix{3, 3, Float64}([0.0 33.241 30.0; 33.241 0.0 27.210884; 30.0 27.210884 0.0])
+    r0 = SMatrix{3, 3, Float64}([0.0 1.425 1.5; 1.425 0.0 1.575; 1.5 1.575 0.0])
+    model = "GeneralKG($epsilon,$sigma,$k,$r0)"
+    chains_el = load_chains("molecule.exyz", args=Dict("temperature" => [2.0], "model" => [model], "list_type" => "EmptyList"))
+    chains_ll = load_chains("molecule.xyz", args=Dict("temperature" => [2.0], "model" => [model], "list_type" => "LinkedList"))
+    system_el = chains_el[1]
+    system_ll = chains_ll[1]
+    @test system_el.N == system_ll.N
+    @test system_el.d == system_ll.d
+    @test system_el.temperature == system_ll.temperature
+    @test all.(system_el.position == system_ll.position)
+    @test all.(system_el.species == system_ll.species)
+    @test all.(system_el.bonds == system_ll.bonds)
+    energy_el = mean(system_el.local_energy) / 2
+    energy_ll = mean(system_ll.local_energy) / 2
+    @test isapprox(energy_el, 25.65865662277199, atol=1e-6)
+    @test isapprox(energy_ll, 25.65865662277199, atol=1e-6)
+
+    # Test simulation energy
+    M = 1
+    seed = 10
+    steps = 100
+    burn = 0
+    block = [0, 1, 2, 4, 8]
+    sampletimes = build_schedule(steps, burn, block)
+    callbacks = (callback_energy, callback_acceptance)
+
+    # NO SWAPS
+    pswap = 0.0
+    displacement_policy = SimpleGaussian()
+    displacement_parameters = ComponentArray(σ=0.05)
+    pool = (
+        Move(Displacement(0, zero(system_el.box)), displacement_policy, displacement_parameters, 1 - pswap),
+    )
+    algorithm_list = (
+    (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
+    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=EXYZ()),
+    (algorithm=StoreLastFrames, scheduler=[steps], fmt=LAMMPS()),
+    (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
+    )
+    ## Empty List simulation
+    chains_el = [deepcopy(system_el)]
+    path_el = "data/noswap/empty_list/"
+    simulation = Simulation(chains_el, algorithm_list, steps; path=path_el, verbose=true)
+    run!(simulation)
+    
+    ## Linked List simulation
+    chains_ll = [deepcopy(system_ll)]
+    path_ll = "data/noswap/linked_list/"
+    simulation = Simulation(chains_ll, algorithm_list, steps; path=path_ll, verbose=true)
+    run!(simulation)
+
+    ## Read energy data and compare
+    path_energy_el = joinpath(path_el, "energy.dat")
+    path_energy_ll = joinpath(path_ll, "energy.dat")
+    energy_el= readdlm(path_energy_el)[:, 2]
+    energy_ll = readdlm(path_energy_ll)[:, 2]
+    @test isapprox(energy_el, energy_ll, atol=1e-6)
+
+end
