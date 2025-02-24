@@ -73,6 +73,6 @@ end
 function write_header(io, system::Particles, t, format::EXYZ, digits::Integer)
     println(io, system.N)
     box_str = compute_box_str(system.box, format)
-    println(io, "Lattice=\"$box_str\" Properties=:$(get_system_column(system, format)):species:S:1:pos:R:$(system.d) Time=$t")
+    println(io, "Lattice=\"$box_str\" Properties=$(get_system_column(system, format)):species:S:1:pos:R:$(system.d) Time=$t")
     return nothing
 end
