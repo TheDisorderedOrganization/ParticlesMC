@@ -70,6 +70,19 @@ function get_system_column(::Molecules, ::EXYZ)
     return "molecule:I:1"
 end
 
+function get_row_bonds(selrow, N, ::EXYZ)
+    return 2
+end
+
+function read_bonds_header(bonds, format::EXYZ)
+    N_bonds = parse(Int, bonds[1])
+    metadata_line = bonds[2]
+    column_match = match(r"Properties=(.*)", metadata_line)
+    column_str = column_match === nothing ? nothing : column_match.captures[1]
+    column_info =  parse_column_string(column_str, format)
+    return N_bonds, column_info
+end
+
 function write_header(io, system::Particles, t, format::EXYZ, digits::Integer)
     println(io, system.N)
     box_str = compute_box_str(system.box, format)
