@@ -62,11 +62,11 @@ function compute_box_str(box, ::EXYZ)
 end
 
 
-function get_system_column(system::Atoms, ::EXYZ)
+function get_system_column(::Atoms, ::EXYZ)
     return ""
 end
 
-function get_system_column(system::Molecules, ::EXYZ)
+function get_system_column(::Molecules, ::EXYZ)
     return "molecule:I:1"
 end
 
