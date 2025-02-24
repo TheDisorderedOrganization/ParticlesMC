@@ -3,6 +3,7 @@
   # ParticlesMC
   [![License](https://img.shields.io/badge/license-GPL%203.0-red.svg)](https://github.com/TheDisorderedOrganization/MCMC/blob/main/LICENSE)
   [![codecov](https://codecov.io/gh/TheDisorderedOrganization/ParticlesMC/graph/badge.svg?token=USGU6ANY03)](https://codecov.io/gh/TheDisorderedOrganization/ParticlesMC)
+  
   <img src="mcmc_logo.png" alt="mcmc" width="200"/>
 </div>
 
