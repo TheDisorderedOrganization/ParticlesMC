@@ -5,38 +5,87 @@ struct EXYZ <: MonteCarlo.Format
     end
 end
 
-#=
-function load_configuration(path, format::EXYZ; m=-1)
-    data = readlines(path)
-    N = parse(Int, data[1])
-    metadata = split(data[2], " ")
-    cell_string = replace(metadata[findfirst(startswith("cell:"), metadata)], "cell:" => "")
-    cell_vector = parse.(Float64, split(cell_string, ","))
-    d = length(cell_vector)
-    box = SVector{d}(cell_vector)
-    selrow = m ≥ 0 ? (N + 2) * m - N + 1 : length(data) + m * (N + 2) + 3
-    frame = data[selrow:selrow+N-1]
-    sT = typeof(eval(Meta.parse(join(split(frame[1], " ")[1:end-d], " "))))
-    species = Vector{sT}(undef, N)
-    position = Vector{SVector{d}{Float64}}(undef, N)
-    for i in eachindex(frame)
-        species[i] = eval(Meta.parse(join(split(frame[i], " ")[1:end-d], " ")))
-        position[i] = SVector{d}(parse.(Float64, split(frame[i], " ")[end-d+1:end]))
+function parse_column_string(column_str::AbstractString, ::EXYZ)
+    columns = split(column_str, ":")
+    column_info = OrderedDict{String, Vector}() # Use OrderedDict to maintain order
+    i, index = 1, 1
+    types = ["S", "I", "R"]
+    while i <= length(columns)
+        if i + 2 <= length(columns) && (columns[i+1] ∈ types)
+          column_name = columns[i]
+          dimension = parse(Int, columns[i + 2])
+          column_info[column_name] = [dimension, index]
+          index += dimension
+          i += 3 # Skip data type and dimension
+        else
+          i += 1
+        end
     end
-    return species, position, box, metadata
+
+    return column_info
 end
 
-function MonteCarlo.store_trajectory(io, system::Particles, t, format::EXYZ)
-    println(io, system.N)
-    box = replace(replace(string(system.box), r"[\[\]]" => ""), r",\s+" => ",")
-    println(io, "step:$t columns:species,position dt:1 cell:$(box) rho:$(system.density) T:$(system.temperature) model:$(system.model.name) potential_energy_per_particle:$(mean(system.local_energy)/2)")
-    for (i, p) in enumerate(system.position)
-        print(io, "$(system.species[i])")
-        for a in 1:system.d
-            print(io, " $(p[a])")
-        end
-        println(io)
+function read_header(data, format::EXYZ)
+    N = parse(Int, data[1])
+    metadata_line = data[2]
+    mat = match(r"Lattice=\"(.*?)\"", metadata_line)
+    if mat === nothing
+        error("Invalid Lattice line format")
     end
+    lattice_str = mat.captures[1]
+    # Convert lattice string to vector of floats
+    lattice_values = map(x -> parse(Float64, x), split(lattice_str))
+    # Construct lattice matrix
+    if length(lattice_values) != 9
+        error("Lattice matrix must have 9 elements")
+    end
+    lattice_matrix = reshape(lattice_values, 3, 3)
+    box = lattice_matrix[diagind(lattice_matrix)]
+    column_match = match(r"Properties=(.*)", metadata_line)
+    column_str = mat === nothing ? nothing : column_match.captures[1]
+    column_info =  parse_column_string(column_str, format)
+    return N, box, column_info, []
+end
+
+function get_selrow(::EXYZ, N, m)
+    return m ≥ 0 ? (N + 2) * m - N + 1 : length(data) + m * (N + 2) + 3
+end
+
+function compute_box_str(box, ::EXYZ)
+    if length(box) == 2
+        return "$(box[1]) 0.0 0.0 0.0 $(box[2]) 0.0 0.0 0.0 0.0"
+    elseif length(box) == 3
+        return "$(box[1]) 0.0 0.0 0.0 $(box[2]) 0.0 0.0 0.0 $(box[3])"
+    else
+        throw(ArgumentError("Box vector must have 2 or 3 elements."))
+    end
+end
+
+
+function get_system_column(::Atoms, ::EXYZ)
+    return ""
+end
+
+function get_system_column(::Molecules, ::EXYZ)
+    return "molecule:I:1"
+end
+
+function get_row_bonds(selrow, N, ::EXYZ)
+    return 2
+end
+
+function read_bonds_header(bonds, format::EXYZ)
+    N_bonds = parse(Int, bonds[1])
+    metadata_line = bonds[2]
+    column_match = match(r"Properties=(.*)", metadata_line)
+    column_str = column_match === nothing ? nothing : column_match.captures[1]
+    column_info =  parse_column_string(column_str, format)
+    return N_bonds, column_info
+end
+
+function write_header(io, system::Particles, t, format::EXYZ, digits::Integer)
+    println(io, system.N)
+    box_str = compute_box_str(system.box, format)
+    println(io, "Lattice=\"$box_str\" Properties=$(get_system_column(system, format)):species:S:1:pos:R:$(system.d) Time=$t")
     return nothing
 end
-=#
