@@ -50,7 +50,7 @@ mutable struct Displacement{T<:AbstractArray} <: Action
 end
 
 
-function MonteCarlo.perform_action!(system::Particles, action::Displacement)
+function Arianna.perform_action!(system::Particles, action::Displacement)
     empty!(system.cache)
     e₁ = destroy_particle!(system, action.i, system.cell_list)
     system.position[action.i] = system.position[action.i] + action.δ
@@ -63,7 +63,7 @@ function MonteCarlo.perform_action!(system::Particles, action::Displacement)
     return e₁, e₂
 end
 
-function MonteCarlo.perform_action_cached!(system::Particles, action::Displacement)
+function Arianna.perform_action_cached!(system::Particles, action::Displacement)
     system.position[action.i] = system.position[action.i] + action.δ
     c, c2 = old_new_cell(system, action.i, system.cell_list)
     if c != c2
@@ -72,22 +72,22 @@ function MonteCarlo.perform_action_cached!(system::Particles, action::Displaceme
     cache_update!(system, action)
 end
 
-function MonteCarlo.invert_action!(action::Displacement, ::Particles)
+function Arianna.invert_action!(action::Displacement, ::Particles)
     action.δ = -action.δ
     return nothing
 end
 
-function MonteCarlo.PolicyGuided.reward(action::Displacement, ::Particles)
+function Arianna.PolicyGuided.reward(action::Displacement, ::Particles)
     return norm(action.δ)^ 2
 end
 
 struct SimpleGaussian <: Policy end
 
-function MonteCarlo.log_proposal_density(action::Displacement, ::SimpleGaussian, parameters, system::Particles)
+function Arianna.log_proposal_density(action::Displacement, ::SimpleGaussian, parameters, system::Particles)
     return -norm(action.δ)^2 / (2parameters.σ^2) - system.d * log(2π * parameters.σ^2) / 2
 end
 
-function MonteCarlo.sample_action!(action::Displacement, ::SimpleGaussian, parameters, system, rng)
+function Arianna.sample_action!(action::Displacement, ::SimpleGaussian, parameters, system::Particles, rng)
     action.i = rand(rng, DiscreteUniform(1, system.N))
     action.δ = map(x -> rand(rng, Normal(x, parameters.σ)), zero(system.box))
     return nothing
@@ -119,7 +119,7 @@ function update_species_list!(species_list, swap_species, i, j)
     species_list.sp_heads[i], species_list.sp_heads[j] = species_list.sp_heads[j], species_list.sp_heads[i]
 end
 
-function MonteCarlo.perform_action!(system::Particles, action::DiscreteSwap)
+function Arianna.perform_action!(system::Particles, action::DiscreteSwap)
     empty!(system.cache)
     i, j = action.i, action.j
     spi, spj = system.species[i], system.species[j]
@@ -128,7 +128,7 @@ function MonteCarlo.perform_action!(system::Particles, action::DiscreteSwap)
     return e₁, e₂
 end
 
-function MonteCarlo.perform_action_cached!(system::Particles, action::DiscreteSwap)
+function Arianna.perform_action_cached!(system::Particles, action::DiscreteSwap)
     i, j = action.i, action.j
     spi, spj = system.species[i], system.species[j]
     system.species[j], system.species[i] = spi, spj
@@ -136,22 +136,22 @@ function MonteCarlo.perform_action_cached!(system::Particles, action::DiscreteSw
     cache_update!(system, action)
 end
 
-function MonteCarlo.invert_action!(action::DiscreteSwap, ::Particles)
+function Arianna.invert_action!(action::DiscreteSwap, ::Particles)
     action.i, action.j = action.j, action.i
     return nothing
 end
 
-function MonteCarlo.PolicyGuided.reward(::DiscreteSwap, system::Particles)
+function Arianna.PolicyGuided.reward(::DiscreteSwap, system::Particles)
     return one(typeof(system.temperature))
 end
 
 struct DoubleUniform <: Policy end
 
-function MonteCarlo.log_proposal_density(action::DiscreteSwap, ::DoubleUniform, parameters, system::Particles)
+function Arianna.log_proposal_density(action::DiscreteSwap, ::DoubleUniform, parameters, system::Particles)
     return -log(action.particles_per_species[1] * action.particles_per_species[2])
 end
 
-function MonteCarlo.sample_action!(action::DiscreteSwap, ::DoubleUniform, parameters, system::Particles, rng)
+function Arianna.sample_action!(action::DiscreteSwap, ::DoubleUniform, parameters, system::Particles, rng)
     action.i = rand(rng, system.species_list.sp_ids[action.species[1]])
     action.j = rand(rng, system.species_list.sp_ids[action.species[2]])
     return nothing
@@ -159,14 +159,14 @@ end
 
 struct EnergyBias <: Policy end
 
-function MonteCarlo.log_proposal_density(action::DiscreteSwap, ::EnergyBias, parameters, system::Particles)
+function Arianna.log_proposal_density(action::DiscreteSwap, ::EnergyBias, parameters, system::Particles)
     numerator = parameters.θ₁ * system.local_energy[action.i] + parameters.θ₂ * system.local_energy[action.j]
     log_sum_exp_1 = log(sum(exp.(parameters.θ₁ .* system.local_energy[system.species_list.sp_ids[action.species[1]]])))
     log_sum_exp_2 = log(sum(exp.(parameters.θ₂ .* system.local_energy[system.species_list.sp_ids[action.species[2]]])))
     return numerator - log_sum_exp_1 - log_sum_exp_2
 end
 
-function MonteCarlo.sample_action!(action::DiscreteSwap, ::EnergyBias, parameters, system::Particles, rng)
+function Arianna.sample_action!(action::DiscreteSwap, ::EnergyBias, parameters, system::Particles, rng)
     w1s = exp.(parameters.θ₁ .* system.local_energy[system.species_list.sp_ids[action.species[1]]])
     w2s = exp.(parameters.θ₂ .* system.local_energy[system.species_list.sp_ids[action.species[2]]])
     w1s .= w1s ./ sum(w1s)
@@ -185,14 +185,14 @@ mutable struct MoleculeFlip <: Action
     j::Int
 end
 
-function MonteCarlo.perform_action!(system::Particles, action::MoleculeFlip)
+function Arianna.perform_action!(system::Particles, action::MoleculeFlip)
     i, j = action.i, action.j
     spi, spj = system.species[i], system.species[j]
     e₁, e₂ = swap_particle_species!(system, spi, i, spj, j)
     return e₁, e₂
 end
 
-function MonteCarlo.invert_action!(action::MoleculeFlip, ::Molecules)
+function Arianna.invert_action!(action::MoleculeFlip, ::Molecules)
     action.i, action.j = action.j, action.i
     return nothing
 end
@@ -201,11 +201,11 @@ function reward(::MoleculeFlip, system::Particles)
     return one(typeof(system.temperature))
 end
 
-function MonteCarlo.log_proposal_density(action::MoleculeFlip, ::DoubleUniform, parameters, system::Particles)
+function Arianna.log_proposal_density(action::MoleculeFlip, ::DoubleUniform, parameters, system::Particles)
     return -log(2)
 end
 
-function MonteCarlo.sample_action!(action::MoleculeFlip, ::DoubleUniform, parameters, system::Particles, rng)
+function Arianna.sample_action!(action::MoleculeFlip, ::DoubleUniform, parameters, system::Particles, rng)
     moleculei = rand(rng, DiscreteUniform(1, system.N_mol))
     mol_speciesi = system.mol_species[moleculei]
     start_mol, end_mol = mol_speciesi[3], mol_speciesi[4]

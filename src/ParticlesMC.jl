@@ -1,10 +1,10 @@
 module ParticlesMC
 
-using MonteCarlo
+using Arianna
 
 export Particles
 
-abstract type Particles end
+abstract type Particles <: AriannaSystem  end
 
 include("utils.jl")
 include("cell_list.jl")

@@ -1,5 +1,5 @@
 # TEST WITH GERHARD'S CONFIG
-using MonteCarlo
+using Arianna
 using ParticlesMC
 using StaticArrays
 using Distributions

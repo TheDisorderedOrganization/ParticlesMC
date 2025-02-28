@@ -1,4 +1,4 @@
-using MonteCarlo
+using Arianna
 using ParticlesMC
 using Test
 using StaticArrays

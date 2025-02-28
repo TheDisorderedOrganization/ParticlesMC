@@ -26,7 +26,7 @@ jobs:
     - name: Install dependencies  
       run: | 
         julia --project=. -e 'using Pkg; 
-          Pkg.add(PackageSpec(url="https://github.com/TheDisorderedOrganization/MonteCarlo.git"));
+          Pkg.add(PackageSpec(url="https://github.com/TheDisorderedOrganization/Arianna.git"));
           Pkg.instantiate()'  
 
     - name: Run tests with coverage  

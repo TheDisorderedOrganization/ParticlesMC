@@ -1,4 +1,4 @@
-struct XYZ <: MonteCarlo.Format
+struct XYZ <: Arianna.Format
     extension::String
     function XYZ()
         return new(".xyz")

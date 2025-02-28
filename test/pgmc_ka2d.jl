@@ -1,5 +1,5 @@
-using MonteCarlo
-using MonteCarlo.PolicyGuided
+using Arianna
+using Arianna.PolicyGuided
 using ParticlesMC
 using StaticArrays
 using Distributions

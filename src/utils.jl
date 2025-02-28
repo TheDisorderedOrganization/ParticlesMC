@@ -1,7 +1,7 @@
 
 using ConcreteStructs, Distributions, Statistics
 
-function MonteCarlo.delta_log_target_density(e1, e2, system::Particles)
+function Arianna.delta_log_target_density(e1, e2, system::Particles)
     return -(e2 - e1) ./ system.temperature
 end
 

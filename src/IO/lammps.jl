@@ -1,4 +1,4 @@
-struct LAMMPS <: MonteCarlo.Format
+struct LAMMPS <: Arianna.Format
     extension::String
     function LAMMPS()
         return new(".lammpstrj")

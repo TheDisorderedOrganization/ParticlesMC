@@ -4,7 +4,7 @@ using ..ParticlesMC: Particles, Atoms, Molecules, System
 using ..ParticlesMC: fold_back, cutoff, volume_sphere
 using ..ParticlesMC: EmptyList, LinkedList
 using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen
-using MonteCarlo
+using Arianna
 using Distributions, LinearAlgebra, StaticArrays, Printf
 using DataStructures: OrderedDict
 export XYZ, EXYZ, LAMMPS
@@ -14,7 +14,7 @@ include("xyz.jl")
 include("exyz.jl")
 include("lammps.jl")
 
-function MonteCarlo.write_system(io, system::Particles)
+function Arianna.write_system(io, system::Particles)
     println(io, "\tNumber of particles: $(system.N)")
     println(io, "\tDimensions: $(system.d)")
     println(io, "\tCell: $(system.box)")
@@ -38,7 +38,7 @@ function load_configuration(filename::String)
     end
 end
 
-function load_configuration(io, format::MonteCarlo.Format; m=1)
+function load_configuration(io, format::Arianna.Format; m=1)
     data = readlines(io)
     N, box, column_info, metadata = read_header(data, format)
     selrow = get_selrow(format, N, m)
@@ -100,7 +100,7 @@ function load_configuration(io, format::MonteCarlo.Format; m=1)
     return config_dict
 end
 
-function read_bonds(data, N, format::MonteCarlo.Format)
+function read_bonds(data, N, format::Arianna.Format)
     selrow = get_selrow(format, N, 1)
     bonds_data = data[N+selrow:end]
     
@@ -256,7 +256,7 @@ function write_position(io, position, digits::Int)
     return nothing
 end
 
-function MonteCarlo.store_trajectory(io, system::Atoms, t, format::MonteCarlo.Format; digits::Integer=6)
+function Arianna.store_trajectory(io, system::Atoms, t, format::Arianna.Format; digits::Integer=6)
     write_header(io, system, t, format, digits)
     for (species, position) in zip(system.species, system.position)
         print(io, "$species")
@@ -265,7 +265,7 @@ function MonteCarlo.store_trajectory(io, system::Atoms, t, format::MonteCarlo.Fo
     return nothing
 end
 
-function MonteCarlo.store_trajectory(io, system::Molecules, t, format::MonteCarlo.Format; digits::Integer=6)
+function Arianna.store_trajectory(io, system::Molecules, t, format::Arianna.Format; digits::Integer=6)
     write_header(io, system, t, format, digits)
     for (molecule, species, position) in zip(system.molecule, system.species, system.position)
         print(io, "$molecule $species")

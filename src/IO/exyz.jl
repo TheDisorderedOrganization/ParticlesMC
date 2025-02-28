@@ -1,4 +1,4 @@
-struct EXYZ <: MonteCarlo.Format
+struct EXYZ <: Arianna.Format
     extension::String
     function EXYZ()
         return new(".exyz")

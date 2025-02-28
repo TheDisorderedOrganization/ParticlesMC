@@ -1,4 +1,4 @@
-using MonteCarlo
+using Arianna
 using ParticlesMC
 
 include("parse_input.jl")
