@@ -34,8 +34,6 @@ inverse_power(r2, epsilon, sigma2, ndiv2 ) = epsilon * (sigma2 / r2)^(ndiv2)
 
 lennard_jones(r2, epsilon, sigma2) = 4 * epsilon * ((sigma2 / r2)^6 - (sigma2 / r2)^3)
 
-wca(r2, epsilon, sigma2) = lennard_jones(r2, epsilon, sigma2) + epsilon
-
 fene(r2, kr02, r02) = kr02 * log(1 - r2 / r02)
 
 ###############################################################################
@@ -169,19 +167,25 @@ struct GeneralKG{V<:AbstractArray} <: DiscreteModel
     kr02::V
     rcut::V
     rcut2::V
+    shift::V
 end
 
 function GeneralKG(epsilon, sigma, k, r0; rcut=2^(1 / 6) * sigma)
     name = "GeneralKG"
-    sigma2 = sigma .^ 2
-    r02 = r0 .^ 2
-    rcut2 = rcut .^ 2
-    kr02 = - k .* r02 ./ 2 
-    return GeneralKG(name, epsilon, sigma2, k, r02, kr02, rcut, rcut2)
+    l = size(sigma, 1)
+    epsilon = SMatrix{l, l}(epsilon)
+    k = SMatrix{l, l}(k)
+    sigma2 = SMatrix{l, l}(sigma .^ 2)
+    r02 = SMatrix{l, l}(r0 .^ 2)
+    rcut = SMatrix{l, l}(rcut)
+    rcut2 = SMatrix{l, l}(rcut .^ 2)
+    kr02 = SMatrix{l, l}(- k .* r02 ./ 2)
+    shift = SMatrix{l, l}([lennard_jones(rcut2[spi, spj], epsilon[spi, spj], sigma2[spi, spj]) for spi in axes(sigma, 1), spj in axes(sigma, 1)])
+    return GeneralKG(name, epsilon, sigma2, k, r02, kr02, rcut, rcut2, shift)
 end
 
 function potential(r2, spi, spj, model::GeneralKG)
-    return wca(r2, model.epsilon[spi, spj], model.sigma2[spi, spj])
+    return lennard_jones(r2, model.epsilon[spi, spj], model.sigma2[spi, spj]) - model.shift[spi, spj]
 end
 
 function bond_potential(r2, spi, spj, model::GeneralKG)
@@ -195,7 +199,7 @@ function bond_potential(r2, spi, spj, model::GeneralKG)
 end
 
 cutoff(spi, spj, model::GeneralKG) = model.rcut[spi, spj]
-cutoff2(spi, spj, model::GeneralKG) = @inbounds model.rcut2[spi, spj]
+cutoff2(spi, spj, model::GeneralKG) = model.rcut2[spi, spj]
 
 ###############################################################################
 
