@@ -1,35 +1,5 @@
 using ComponentArrays
 
-
-function cache_update!(system::Particles, action::Action)
-    index_set = BitSet()
-    @inbounds for elt in system.cache
-        i = elt[1]
-        if !(i in index_set)
-            push!(index_set, i)
-            system.local_energy[i] = elt[2] 
-        end
-    end
-end
-
-function build_cache!(system::Particles, i, ::EmptyList)
-    return nothing
-end
-
-function build_cache!(system::Particles, i, cell_list::LinkedList)
-    mc = get_cell(system.position[i], cell_list.cell)
-    @inbounds for mc2 in Iterators.product(map(x -> x-1:x+1, mc)...)
-        # Calculate the scalar cell index of the neighbour cell (with PBC)
-        c2 = cell_index(mc2, cell_list.ncells)
-        # Scan atoms in cell c2
-        j = cell_list.head[c2]
-        while (j != -1)
-            push!(system.cache, (j, system.local_energy[j]))
-            j = cell_list.list[j]
-        end
-    end
-end
-
 ###############################################################################
 # SIMPLE DISPLACEMENT
 
@@ -42,39 +12,42 @@ A struct representing a displacement action, where particle i is moved by specif
 - `i::Int`: Indices of the particles or elements in `system` to be displaced.
 - `δ::T`: Displacement values for each corresponding index in `is`.
 """
-
-
-mutable struct Displacement{T<:AbstractArray} <: Action
+mutable struct Displacement{T<:AbstractArray, F<:AbstractFloat} <: Action
     i::Int
     δ::T
+    δe::F
 end
 
+function update_position!(system::Particles, action::Displacement)
+    @inbounds system.position[action.i] = system.position[action.i] + action.δ
+end
 
 function Arianna.perform_action!(system::Particles, action::Displacement)
-    empty!(system.cache)
-    e₁ = destroy_particle!(system, action.i, system.cell_list)
-    system.position[action.i] = system.position[action.i] + action.δ
-    c, c2 = old_new_cell(system, action.i, system.cell_list)
+    neighbour_list = get_neighbour_list(system)
+    e₁ = destroy_particle!(system, action.i, neighbour_list)
+    update_position!(system, action)
+    c, c2 = old_new_cell(system, action.i, neighbour_list)
     if c != c2
-        update_cell_list!(system, action.i, c, c2, system.cell_list)
-        build_cache!(system, action.i, system.cell_list)
+        update_cell_list!(action.i, c, c2, neighbour_list)
     end
-    e₂ = create_particle!(system, action.i, system.cell_list)
+    e₂ = create_particle!(system, action.i, neighbour_list)
+    action.δe = e₂ - e₁
+    system.energy[1] += action.δe
     return e₁, e₂
 end
 
-function Arianna.perform_action_cached!(system::Particles, action::Displacement)
-    system.position[action.i] = system.position[action.i] + action.δ
-    c, c2 = old_new_cell(system, action.i, system.cell_list)
+function Arianna.revert_action!(system::Particles, action::Displacement)
+    update_position!(system, action)
+    neighbour_list = get_neighbour_list(system)
+    system.energy[1] -= action.δe
+    c, c2 = old_new_cell(system, action.i, neighbour_list)
     if c != c2
-        update_cell_list!(system, action.i, c, c2, system.cell_list)
+        update_cell_list!(action.i, c, c2, neighbour_list)
     end
-    cache_update!(system, action)
 end
 
 function Arianna.invert_action!(action::Displacement, ::Particles)
     action.δ = -action.δ
-    return nothing
 end
 
 function Arianna.PolicyGuided.reward(action::Displacement, ::Particles)
@@ -88,9 +61,8 @@ function Arianna.log_proposal_density(action::Displacement, ::SimpleGaussian, pa
 end
 
 function Arianna.sample_action!(action::Displacement, ::SimpleGaussian, parameters, system::Particles, rng)
-    action.i = rand(rng, DiscreteUniform(1, system.N))
+    action.i = rand(rng, DiscreteUniform(1, length(system)))
     action.δ = map(x -> rand(rng, Normal(x, parameters.σ)), zero(system.box))
-    return nothing
 end
 
 ###############################################################################
@@ -122,15 +94,15 @@ end
 function Arianna.perform_action!(system::Particles, action::DiscreteSwap)
     empty!(system.cache)
     i, j = action.i, action.j
-    spi, spj = system.species[i], system.species[j]
+    spi, spj = get_species(system, i), get_species(system, j)
     e₁, e₂ = swap_particle_species!(system, spi, i, spj, j)
     update_species_list!(system.species_list, action.species, i, j)
     return e₁, e₂
 end
 
-function Arianna.perform_action_cached!(system::Particles, action::DiscreteSwap)
+function Arianna.revert_action!(system::Particles, action::DiscreteSwap)
     i, j = action.i, action.j
-    spi, spj = system.species[i], system.species[j]
+    spi, spj = get_species(system, i), get_species(system, j)
     system.species[j], system.species[i] = spi, spj
     update_species_list!(system.species_list, action.species, i, j)
     cache_update!(system, action)
@@ -138,7 +110,6 @@ end
 
 function Arianna.invert_action!(action::DiscreteSwap, ::Particles)
     action.i, action.j = action.j, action.i
-    return nothing
 end
 
 function Arianna.PolicyGuided.reward(::DiscreteSwap, system::Particles)
@@ -154,7 +125,6 @@ end
 function Arianna.sample_action!(action::DiscreteSwap, ::DoubleUniform, parameters, system::Particles, rng)
     action.i = rand(rng, system.species_list.sp_ids[action.species[1]])
     action.j = rand(rng, system.species_list.sp_ids[action.species[2]])
-    return nothing
 end
 
 struct EnergyBias <: Policy end
@@ -175,7 +145,6 @@ function Arianna.sample_action!(action::DiscreteSwap, ::EnergyBias, parameters, 
     id2 = rand(rng, Categorical(w2s))
     action.i = system.species_list.sp_ids[action.species[1]][id1]
     action.j = system.species_list.sp_ids[action.species[2]][id2]
-    return nothing
 end
 
 
@@ -194,7 +163,6 @@ end
 
 function Arianna.invert_action!(action::MoleculeFlip, ::Molecules)
     action.i, action.j = action.j, action.i
-    return nothing
 end
 
 function reward(::MoleculeFlip, system::Particles)
@@ -210,9 +178,6 @@ function Arianna.sample_action!(action::MoleculeFlip, ::DoubleUniform, parameter
     mol_speciesi = system.mol_species[moleculei]
     start_mol, end_mol = mol_speciesi[3], mol_speciesi[4]
     action.i, action.j = sample(rng, start_mol:end_mol, 2; replace=false)
-    return nothing
 end
 
 ###############################################################################
-
-nothing
