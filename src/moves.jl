@@ -61,8 +61,8 @@ function Arianna.log_proposal_density(action::Displacement, ::SimpleGaussian, pa
 end
 
 function Arianna.sample_action!(action::Displacement, ::SimpleGaussian, parameters, system::Particles, rng)
-    action.i = rand(rng, DiscreteUniform(1, length(system)))
-    action.δ = map(x -> rand(rng, Normal(x, parameters.σ)), zero(system.box))
+    action.i = rand(rng, 1:10)
+    action.δ = rand(rng, Normal(0, parameters.σ), system.d)
 end
 
 ###############################################################################

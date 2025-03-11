@@ -4,7 +4,7 @@ using Distributions
 using Random
 using StaticArrays
 using ComponentArrays
-using Profile
+using PProf, Profile
 
 seed = 42
 rng = Xoshiro(seed)
