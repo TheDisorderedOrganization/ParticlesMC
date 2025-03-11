@@ -19,7 +19,7 @@ get_model(system::Particles, i::Int, j::Int) = @inbounds system.model_matrix[get
 get_local_energy(system::Particles, i::Int) = @inbounds system.local_energy[i]
 get_box(system::Particles) = system.box
 get_neighbour_list(system::Particles) = system.cell_list
-
+get_start_end_mol(system::Particles, i::Int) = @inbounds system.start_mol[i], system.start_mol[i] + system.length_mol[i]
 Base.length(system::Particles) = system.N
 Base.eachindex(system::Particles) = Base.OneTo(length(system))
 Base.getindex(system::Atoms, i::Int) = system.position[i], system.species[i], system.local_energy[i]
@@ -45,7 +45,7 @@ end
 export callback_energy
 export nearest_image_distance
 export Model
-export Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen
+export Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer
 export NeighbourList, LinkedList, CellList, EmptyList
 export Atoms, Molecules
 export Displacement, DiscreteSwap

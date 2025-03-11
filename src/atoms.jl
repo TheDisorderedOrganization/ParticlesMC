@@ -32,10 +32,11 @@ function System(position, species, density::T, temperature::T, model_matrix; lis
     return system
 end
 
-function check_compute_energy_ij(system::Atoms, i, j, position_i, model_ij::Model)
+function check_compute_energy_ij(system::Atoms, i, j, position_i)
     # Early return using && for short-circuit evaluation
     i == j && return zero(typeof(system.density))
     # If i != j, compute energy directly
+    model_ij = get_model(system, i, j)
     position_j = get_position(system, j)
     return compute_energy_ij(system, position_i, position_j, model_ij)
 end
@@ -46,12 +47,15 @@ function compute_energy_ij(system::Atoms, position_i, position_j, model_ij::Mode
     return potential(r2, model_ij)
 end
 
+function compute_local_energy(system::Atoms, i)
+    return compute_local_energy(system, i, system.cell_list)
+end
+
 function compute_local_energy(system::Atoms, i, ::EmptyList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
-    for (j, position_j) in enumerate(system)
-        model_ij = get_model(system, i, j)
-        energy_i += check_compute_energy_ij(system, i, j, position_i, model_ij)
+    for (j, _) in enumerate(system)
+        energy_i += check_compute_energy_ij(system, i, j, position_i)
     end
     return energy_i
 end
@@ -61,9 +65,8 @@ function destroy_particle!(system::Atoms, i, ::EmptyList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
     # Loop over particles
-    @inbounds for (j, position_j) in enumerate(system)
-        model_ij = model(system, i, j)
-        energy_ij = check_compute_energy_ij(system, i, j, position_i, model_ij)
+    @inbounds for (j, _) in enumerate(system)
+        energy_ij = check_compute_energy_ij(system, i, j, position_i)
         energy_i += energy_ij
     end
     return energy_i
@@ -74,8 +77,7 @@ function create_particle!(system::Atoms, i, ::EmptyList)
     position_i = get_position(system, i)
     # Loop over particles
     @inbounds for (j, position_j) in enumerate(system)
-        model_ij = model(system, i, j)
-        energy_ij = check_compute_energy_ij(system, i, j, position_i, model_ij)
+        energy_ij = check_compute_energy_ij(system, i, j, position_i)
         energy_i += energy_ij
     end
     return energy_i
@@ -90,9 +92,8 @@ function compute_local_energy(system::Atoms, i, cell_list::CellList)
         # Calculate the scalar cell index of the neighbour cell (with PBC)
         c2 = cell_index(cell_list, mc2)
         # Scan atoms in cell c2
-        for j in cell_list.cells[c2]
-            model_ij = get_model(system, i, j)
-            energy_i += check_compute_energy_ij(system, i, j, position_i, model_ij)
+        @inbounds for j in cell_list.cells[c2]
+            energy_i += check_compute_energy_ij(system, i, j, position_i)
         end
     end
     return energy_i
@@ -111,8 +112,7 @@ function destroy_particle!(system::Atoms, i, cell_list::CellList)
         # Scan atoms in cell c2
         neighbours = cell_list.cells[c2]
         @inbounds for j in neighbours
-            model_ij = get_model(system, i, j)
-            energy_ij = check_compute_energy_ij(system, i, j, position_i, model_ij)
+            energy_ij = check_compute_energy_ij(system, i, j, position_i)
             energy_i += energy_ij
         end
     end
@@ -131,8 +131,7 @@ function create_particle!(system::Atoms, i, cell_list::CellList)
         # Scan atoms in cell c2
         neighbours = cell_list.cells[c2]
         @inbounds for j in neighbours
-            model_ij = get_model(system, i, j)
-            energy_ij = check_compute_energy_ij(system, i, j, position_i, model_ij)
+            energy_ij = check_compute_energy_ij(system, i, j, position_i)
             energy_i += energy_ij
         end
     end
@@ -152,8 +151,7 @@ function compute_local_energy(system::Atoms, i, cell_list::LinkedList)
         # Scan atoms in cell c2
         j = cell_list.head[c2]
         while (j != -1)
-            model_ij = get_model(system, i, j)
-            energy_ij = check_compute_energy_ij(system, i, j, position_i, model_ij)
+            energy_ij = check_compute_energy_ij(system, i, j, position_i)
             energy_i += energy_ij
             j = cell_list.list[j]
         end
@@ -174,8 +172,7 @@ function destroy_particle!(system::Atoms, i, cell_list::LinkedList)
         # Scan atoms in cell c2
         j = cell_list.head[c2]
         while (j != -1)
-            model_ij = get_model(system, i, j)
-            energy_ij = check_compute_energy_ij(system, i, j, position_i, model_ij)
+            energy_ij = check_compute_energy_ij(system, i, j, position_i)
             energy_i += energy_ij
             j = cell_list.list[j]
         end
@@ -195,8 +192,7 @@ function create_particle!(system::Atoms, i, cell_list::LinkedList)
         # Scan atoms in cell c2
         j = cell_list.head[c2]
         while (j != -1)
-            model_ij = get_model(system, i, j)
-            energy_ij = check_compute_energy_ij(system, i, j, position_i, model_ij)
+            energy_ij = check_compute_energy_ij(system, i, j, position_i)
             energy_i += energy_ij
             j = cell_list.list[j]
         end

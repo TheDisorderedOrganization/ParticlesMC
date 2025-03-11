@@ -73,14 +73,15 @@ mutable struct DiscreteSwap <: Action
     j::Int
     species::Tuple{Int,Int}
     particles_per_species::Tuple{Int,Int}
+    δe::Float64
 end
 
 function swap_particle_species!(system::Particles, spi, i, spj, j)
     e₁ᵢ = destroy_particle!(system, i, system.cell_list)
-    system.species[i] = spj
-    e₂ᵢ = create_particle!(system, i, system.cell_list)
     e₁ⱼ = destroy_particle!(system, j, system.cell_list)
+    system.species[i] = spj
     system.species[j] = spi
+    e₂ᵢ = create_particle!(system, i, system.cell_list)
     e₂ⱼ = create_particle!(system, j, system.cell_list)
     return e₁ᵢ + e₁ⱼ, e₂ᵢ + e₂ⱼ
 end
@@ -92,10 +93,11 @@ function update_species_list!(species_list, swap_species, i, j)
 end
 
 function Arianna.perform_action!(system::Particles, action::DiscreteSwap)
-    empty!(system.cache)
     i, j = action.i, action.j
     spi, spj = get_species(system, i), get_species(system, j)
     e₁, e₂ = swap_particle_species!(system, spi, i, spj, j)
+    action.δe = e₂ - e₁
+    system.energy[1] += action.δe
     update_species_list!(system.species_list, action.species, i, j)
     return e₁, e₂
 end
@@ -105,7 +107,7 @@ function Arianna.revert_action!(system::Particles, action::DiscreteSwap)
     spi, spj = get_species(system, i), get_species(system, j)
     system.species[j], system.species[i] = spi, spj
     update_species_list!(system.species_list, action.species, i, j)
-    cache_update!(system, action)
+    system.energy[1] -= action.δe
 end
 
 function Arianna.invert_action!(action::DiscreteSwap, ::Particles)
@@ -158,6 +160,8 @@ function Arianna.perform_action!(system::Particles, action::MoleculeFlip)
     i, j = action.i, action.j
     spi, spj = system.species[i], system.species[j]
     e₁, e₂ = swap_particle_species!(system, spi, i, spj, j)
+    action.δe = e₂ - e₁
+    system.energy[1] += action.δe
     return e₁, e₂
 end
 
@@ -174,9 +178,8 @@ function Arianna.log_proposal_density(action::MoleculeFlip, ::DoubleUniform, par
 end
 
 function Arianna.sample_action!(action::MoleculeFlip, ::DoubleUniform, parameters, system::Particles, rng)
-    moleculei = rand(rng, DiscreteUniform(1, system.N_mol))
-    mol_speciesi = system.mol_species[moleculei]
-    start_mol, end_mol = mol_speciesi[3], mol_speciesi[4]
+    molecule_i = rand(rng, DiscreteUniform(1, system.Nmol))
+    start_mol, end_mol = get_start_end_mol(system, molecule_i)
     action.i, action.j = sample(rng, start_mol:end_mol, 2; replace=false)
 end
 
