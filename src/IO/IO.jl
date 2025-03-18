@@ -25,14 +25,14 @@ function Arianna.write_system(io, system::Particles)
     return nothing
 end
 
-function load_configuration(filename::String)
+function load_configuration(filename::String; m=1)
     io = open(filename, "r")  # Open file as IOStream
     if endswith(filename, ".xyz")
-        return load_configuration(io, XYZ())
+        return load_configuration(io, XYZ(); m=m)
     elseif endswith(filename, ".exyz")
-        return load_configuration(io, EXYZ())
+        return load_configuration(io, EXYZ(); m=m)
     elseif endswith(filename, ".lmp") || endswith(filename, ".lammpstrj") || endswith(filename, ".lammps")
-        return load_configuration(io, LAMMPS())
+        return load_configuration(io, LAMMPS(); m=m)
     else
         error("Unsupported file format: $filename")
     end
