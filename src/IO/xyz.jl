@@ -79,3 +79,10 @@ function write_header(io, system::Particles, t, format::XYZ, digits::Integer)
     return nothing
 end
 
+function write_header(io, system::HardSpheres, t, format::XYZ, digits::Integer)
+    println(io, system.N)
+    box = replace(replace(string(system.box), r"[\[\]]" => ""), r",\s+" => ",")
+    println(io, "step:$t columns:$(get_system_column(system, format))species,position dt:1 cell:$(box) rho:$(system.density) T:$(system.temperature) model:HardSpheres")
+    return nothing
+end
+

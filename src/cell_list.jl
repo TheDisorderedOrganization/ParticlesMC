@@ -18,8 +18,10 @@ struct LinkedList{T<:AbstractFloat,d} <: CellList
 end
 
 function LinkedList(box, rcut, N)
-    cell = box ./ fld.(box, rcut)
-    ncells = ntuple(a -> Int(box[a] / cell[a]), length(box))
+    ncells = ntuple(a -> Int(fld(box[a], 1.4)), length(box))
+    cell = box ./ ncells
+    # cell = box ./ fld.(box, rcut)
+    # ncells = ntuple(a -> Int(box[a] ÷ cell[a]), length(box))
     head = -ones(Int, prod(ncells))
     list = zeros(Int, N)
     cs = zeros(Int, N)

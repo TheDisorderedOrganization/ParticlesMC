@@ -1,6 +1,6 @@
 module IO
 
-using ..ParticlesMC: Particles, Atoms, Molecules, System
+using ..ParticlesMC: Particles, Atoms, Molecules, HardSpheres, System
 using ..ParticlesMC: fold_back, cutoff, volume_sphere
 using ..ParticlesMC: EmptyList, LinkedList
 using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen
@@ -256,7 +256,11 @@ function write_position(io, position, digits::Int)
     return nothing
 end
 
-function Arianna.store_trajectory(io, system::Atoms, t, format::Arianna.Format; digits::Integer=6)
+function get_system_column(::Particles, format::Arianna.Format)
+    return ""
+end
+
+function Arianna.store_trajectory(io, system::Particles, t, format::Arianna.Format; digits::Integer=6)
     write_header(io, system, t, format, digits)
     for (species, position) in zip(system.species, system.position)
         print(io, "$species")

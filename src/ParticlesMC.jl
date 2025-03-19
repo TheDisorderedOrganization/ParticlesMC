@@ -12,6 +12,7 @@ include("models.jl")
 include("molecules.jl")
 include("atoms.jl")
 include("moves.jl")
+include("hard_spheres.jl")
 
 
 export callback_energy
@@ -28,5 +29,7 @@ export perform_action!, revert_action!
 include("IO/IO.jl")
 using .IO: XYZ, EXYZ, LAMMPS, load_configuration, load_chains
 export XYZ, EXYZ, LAMMPS, load_configuration, load_chains
+
+export HardSpheres, check_overlaps, Barostat
 
 end
