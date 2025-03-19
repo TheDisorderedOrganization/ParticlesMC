@@ -63,7 +63,7 @@ function Arianna.perform_action!(system::Particles, action::Displacement)
     return e₁, e₂
 end
 
-function Arianna.perform_action_cached!(system::Particles, action::Displacement)
+function Arianna.revert_action!(system::Particles, action::Displacement)
     system.position[action.i] = system.position[action.i] + action.δ
     c, c2 = old_new_cell(system, action.i, system.cell_list)
     if c != c2
@@ -128,7 +128,7 @@ function Arianna.perform_action!(system::Particles, action::DiscreteSwap)
     return e₁, e₂
 end
 
-function Arianna.perform_action_cached!(system::Particles, action::DiscreteSwap)
+function Arianna.revert_action!(system::Particles, action::DiscreteSwap)
     i, j = action.i, action.j
     spi, spj = system.species[i], system.species[j]
     system.species[j], system.species[i] = spi, spj
