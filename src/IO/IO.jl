@@ -3,7 +3,7 @@ module IO
 using ..ParticlesMC: Particles, Atoms, Molecules, HardSpheres, System
 using ..ParticlesMC: fold_back, cutoff, volume_sphere
 using ..ParticlesMC: EmptyList, LinkedList
-using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen
+using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, HardCore
 using Arianna
 using Distributions, LinearAlgebra, StaticArrays, Printf
 using DataStructures: OrderedDict

@@ -10,7 +10,12 @@ mutable struct HardSpheres{D,T<:AbstractFloat,C<:CellList} <: Particles
     particle_ids::Base.OneTo{Int}
 end
 
-function HardSpheres(position, species, density::T, temperature::T; list_type=EmptyList) where {T<:AbstractFloat}
+struct HardCore <: Model end
+
+cutoff(si, sj, ::HardCore) = (si + sj) / 2
+cutoff2(si, sj, ::HardCore) = (si + sj)^2 / 4
+
+function System(position, species, density::T, temperature::T, ::HardCore; list_type=EmptyList) where {T<:AbstractFloat}
     @assert length(position) == length(species)
     particle_ids = eachindex(position)
     N = length(particle_ids)
@@ -101,7 +106,7 @@ function Arianna.write_system(io, system::HardSpheres)
     println(io, "\tDensity: $(system.density)")
     println(io, "\tTemperature: $(system.temperature)")
     println(io, "\tCell list: " * replace(string(typeof(system.cell_list)), r"\{.*" => ""))
-    println(io, "\tModel: HardSpheres")
+    println(io, "\tModel: HardCore")
     return nothing
 end
 

@@ -20,8 +20,7 @@ box = @SVector fill(typeof(temperature)((N / density)^(1 / d)), d)
 position = [[box .* @SVector rand(rng, d) for i in 1:N] for m in 1:M]
 species = [shuffle!(rng, vcat(ones(NA), 1.4 * ones(NB))) for _ in 1:M]
 
-#chains = [HardSpheres(position[m], species[m], density, temperature; list_type=EmptyList) for m in 1:M]
-chains = [HardSpheres(position[m], species[m], density, temperature; list_type=LinkedList) for m in 1:M]
+chains = [System(position[m], species[m], density, temperature, HardCore(); list_type=LinkedList) for m in 1:M]
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.5)
 barostat_policy = SimpleGaussian()
