@@ -80,6 +80,10 @@ function check_overlaps(system)
     return false
 end
 
+function callback_overlaps(simulation)
+    return all(check_overlaps(system) for system in simulation.chains)
+end
+
 function Arianna.perform_action!(system::HardSpheres, action::Displacement)
     system.position[action.i] = system.position[action.i] + action.δ
     c, c2 = old_new_cell(system, action.i, system.cell_list)

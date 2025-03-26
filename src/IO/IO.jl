@@ -189,7 +189,7 @@ function load_chains(init_path; args=Dict(), verbose=false)
         initial_box_array .= [box .* λ for (box, λ) in zip(initial_box_array, λs)]
     end
     if haskey(args, "temperature") && !isnothing(args["temperature"])
-        initial_temperature_array = args["temperature"]
+        initial_temperature_array .= args["temperature"]
     elseif isnothing(initial_temperature_array)
         missing_key_error("temperature")
     end

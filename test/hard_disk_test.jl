@@ -11,7 +11,7 @@ rng = Xoshiro(seed)
 NA = 108
 NB = 108
 N = NA + NB
-M = 1
+M = 10
 d = 2
 temperature = 1.0
 density = 0.2
@@ -46,10 +46,10 @@ learner_scheduler = build_schedule(steps, pgmc_start, 10)
 path = "data/test/particles/HardDisks/"
 sampletimes = build_schedule(steps, burn, block)
 algorithm_list = (
-    (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=N),
-    (algorithm=PolicyGradientEstimator, dependencies=(Metropolis,), optimisers=optimisers, q_batch_size=20, parallel=false, scheduler=estimator_scheduler),
+    (algorithm=Metropolis, pool=pool, seed=seed, parallel=true, sweepstep=N),
+    (algorithm=PolicyGradientEstimator, dependencies=(Metropolis,), optimisers=optimisers, q_batch_size=20, parallel=true, scheduler=estimator_scheduler),
     (algorithm=PolicyGradientUpdate, dependencies=(PolicyGradientEstimator,), scheduler=learner_scheduler),
-    (algorithm=StoreCallbacks, callbacks=(callback_acceptance,), scheduler=sampletimes),
+    (algorithm=StoreCallbacks, callbacks=(callback_acceptance,callback_overlaps), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
     (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
     (algorithm=StoreParameters, dependencies=(Metropolis,), scheduler=sampletimes),
@@ -57,3 +57,5 @@ algorithm_list = (
 )
 simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
 run!(simulation)
+
+#run(`rsync -av --include='*/' --include='lastframe.xyz' --exclude='*' data/test/particles/HardDisks /Users/Leonardo/Documents/PhD/Projects/theta/data/`)

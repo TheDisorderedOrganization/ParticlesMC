@@ -47,7 +47,7 @@ function read_header(data, format::XYZ)
     box = SVector{d}(cell_vector)
     column_str = replace(metadata[findfirst(startswith("columns:"), metadata)], "columns:" => "")
     column_info = parse_column_string(column_str, format; d=d)
-    return N, box, column_info, []
+    return N, box, column_info, metadata
 end
 
 function get_system_column(::Atoms, ::XYZ)

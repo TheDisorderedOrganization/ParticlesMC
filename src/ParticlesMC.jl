@@ -30,6 +30,6 @@ include("IO/IO.jl")
 using .IO: XYZ, EXYZ, LAMMPS, load_configuration, load_chains
 export XYZ, EXYZ, LAMMPS, load_configuration, load_chains
 
-export HardSpheres, HardCore, check_overlaps, Barostat
+export HardSpheres, HardCore, check_overlaps, Barostat, callback_overlaps
 
 end
