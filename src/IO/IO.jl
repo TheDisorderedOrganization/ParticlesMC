@@ -194,7 +194,7 @@ function load_chains(init_path; args=Dict(), verbose=false)
         missing_key_error("temperature")
     end
     if haskey(args, "model") && !isnothing(args["model"])
-        input_models = args["model"]
+        input_models .= args["model"]
 
     elseif isnothing(input_models)
         missing_key_error("model")
