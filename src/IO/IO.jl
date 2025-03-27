@@ -173,7 +173,7 @@ function load_chains(init_path; args=Dict(), verbose=false)
     @assert all(isequal(N), length.(initial_position_array))
     @assert all(isequal(d), vcat([length.(X) for X in initial_position_array]...))
     initial_density_array = length.(initial_position_array) ./ prod.(initial_box_array)
-    if length(metadata_array) > 1
+    if length(metadata_array) ≥ 1
         initial_temperature_array = [parse(Float64, split(filter(x -> occursin("T:", x), metadata)[1], ":")[2]) for metadata in metadata_array]
         input_models = [split(filter(x -> occursin("model:", x), metadata)[1], ":")[2] for metadata in metadata_array]
         @assert all(isequal(input_models[1]), input_models)
@@ -195,7 +195,6 @@ function load_chains(init_path; args=Dict(), verbose=false)
     end
     if haskey(args, "model") && !isnothing(args["model"])
         input_models .= args["model"]
-
     elseif isnothing(input_models)
         missing_key_error("model")
     end
