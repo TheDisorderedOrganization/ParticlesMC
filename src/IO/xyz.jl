@@ -73,9 +73,9 @@ end
 
 
 function write_header(io, system::Particles, t, format::XYZ, digits::Integer)
-    println(io, system.N)
+    println(io, length(system))
     box = replace(replace(string(system.box), r"[\[\]]" => ""), r",\s+" => ",")
-    println(io, "step:$t columns:$(get_system_column(system, format))species,position dt:1 cell:$(box) rho:$(system.density) T:$(system.temperature) model:$(system.model.name) potential_energy_per_particle:$(mean(system.local_energy)/2)")
+    println(io, "step:$t columns:$(get_system_column(system, format))species,position dt:1 cell:$(box) rho:$(system.density) T:$(system.temperature) potential_energy_per_particle:$(mean(system.local_energy)/2)")
     return nothing
 end
 

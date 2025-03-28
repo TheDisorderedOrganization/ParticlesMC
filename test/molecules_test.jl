@@ -4,6 +4,7 @@ using Distributions
 using Random
 using StaticArrays
 using ComponentArrays
+using PProf, Profile
 
 seed = 42
 rng = Xoshiro(seed)
@@ -45,26 +46,22 @@ function create_bond_matrix(N::Int)
     return matrix
 end
 
+
+model_matrix = Trimer()
 bonds = create_bond_matrix(N)
-epsilon = SMatrix{3, 3, Float64}([1.0 1.0 1.0; 1.0 1.0 1.0; 1.0 1.0 1.0])
-sigma = SMatrix{3, 3, Float64}([0.9 0.95 1.0; 0.95 1.0 1.05; 1.0 1.05 1.1])
-k = SMatrix{3, 3, Float64}([0.0 33.241 30.0; 33.241 0.0 27.210884; 30.0 27.210884 0.0])
-r0 = SMatrix{3, 3, Float64}([0.0 1.425 1.5; 1.425 0.0 1.575; 1.5 1.575 0.0])
-model = GeneralKG(epsilon, sigma, k, r0)
-chains = [System(position, species, molecule, density, temperature, model, bonds; list_type=LinkedList) for _ in 1:M]
+chains = [System(position, species, molecule, density, temperature, model_matrix, bonds; list_type=LinkedList) for _ in 1:M]
 ## Define moves and combine them into a pool
 pswap = 0.2
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.05)
 pool = (
-    Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
+    Move(Displacement(0, zero(box), 0.0), displacement_policy, displacement_parameters, 1.0),
 )
 ## Define the simulation struct
 steps = 1000
 burn = 0
-block = [0, 10]
+block = [0, 1000]
 sampletimes = build_schedule(steps, burn, block)
-schedulers = [build_schedule(steps, 0, 1), sampletimes, sampletimes, [0, steps], build_schedule(steps, burn, steps ÷ 10)]
 callbacks = (callback_energy, callback_acceptance)
 
 path = "data/test/particles/Molecules/T$temperature/N$N/M$M/seed$seed"

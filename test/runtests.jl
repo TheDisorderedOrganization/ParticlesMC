@@ -38,7 +38,7 @@ using DelimitedFiles
     displacement_policy = SimpleGaussian()
     displacement_parameters = ComponentArray(σ=0.05)
     pool = (
-        Move(Displacement(0, zero(system_el.box)), displacement_policy, displacement_parameters, 1 - pswap),
+        Move(Displacement(0, zero(system_el.box), 0.0), displacement_policy, displacement_parameters, 1 - pswap),
     )
     algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
@@ -73,9 +73,9 @@ using DelimitedFiles
     swap_policy = DoubleUniform()
     swap_parameters = Vector{Float64}()
     pool = (
-    Move(Displacement(0, zero(system_el.box)), displacement_policy, displacement_parameters, 1 - pswap),
-    Move(DiscreteSwap(0, 0, (1, 3), (NA, NC)), swap_policy, swap_parameters, pswap / 2),
-    Move(DiscreteSwap(0, 0, (2, 3), (NB, NC)), swap_policy, swap_parameters, pswap / 2),
+    Move(Displacement(0, zero(system_el.box), 0.0), displacement_policy, displacement_parameters, 1 - pswap),
+    Move(DiscreteSwap(0, 0, (1, 3), (NA, NC), 0.0), swap_policy, swap_parameters, pswap / 2),
+    Move(DiscreteSwap(0, 0, (2, 3), (NB, NC), 0.0), swap_policy, swap_parameters, pswap / 2),
     )
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
@@ -108,13 +108,8 @@ end
 
 @testset "Molecule potential energy test" begin
     # Test inital configuration
-    epsilon = SMatrix{3, 3, Float64}([1.0 1.0 1.0; 1.0 1.0 1.0; 1.0 1.0 1.0])
-    sigma = SMatrix{3, 3, Float64}([0.9 0.95 1.0; 0.95 1.0 1.05; 1.0 1.05 1.1])
-    k = SMatrix{3, 3, Float64}([0.0 33.241 30.0; 33.241 0.0 27.210884; 30.0 27.210884 0.0])
-    r0 = SMatrix{3, 3, Float64}([0.0 1.425 1.5; 1.425 0.0 1.575; 1.5 1.575 0.0])
-    model = "GeneralKG($epsilon,$sigma,$k,$r0)"
-    chains_el = load_chains("molecule.exyz", args=Dict("temperature" => [2.0], "model" => [model], "list_type" => "EmptyList"))
-    chains_ll = load_chains("molecule.xyz", args=Dict("temperature" => [2.0], "model" => [model], "list_type" => "LinkedList"))
+    chains_el = load_chains("molecule.exyz", args=Dict("temperature" => [2.0], "model" => ["Trimer"], "list_type" => "EmptyList"))
+    chains_ll = load_chains("molecule.xyz", args=Dict("temperature" => [2.0], "model" => ["Trimer"], "list_type" => "LinkedList"))
     system_el = chains_el[1]
     system_ll = chains_ll[1]
     @test system_el.N == system_ll.N
@@ -142,7 +137,7 @@ end
     displacement_policy = SimpleGaussian()
     displacement_parameters = ComponentArray(σ=0.05)
     pool = (
-        Move(Displacement(0, zero(system_el.box)), displacement_policy, displacement_parameters, 1 - pswap),
+        Move(Displacement(0, zero(system_el.box), 0.0), displacement_policy, displacement_parameters, 1 - pswap),
     )
     algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),

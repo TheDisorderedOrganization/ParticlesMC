@@ -1,9 +1,9 @@
 module IO
 
 using ..ParticlesMC: Particles, Atoms, Molecules, System
-using ..ParticlesMC: fold_back, cutoff, volume_sphere
-using ..ParticlesMC: EmptyList, LinkedList
-using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen
+using ..ParticlesMC: fold_back, volume_sphere
+using ..ParticlesMC: EmptyList, LinkedList, CellList
+using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer
 using Arianna
 using Distributions, LinearAlgebra, StaticArrays, Printf
 using DataStructures: OrderedDict
@@ -15,13 +15,12 @@ include("exyz.jl")
 include("lammps.jl")
 
 function Arianna.write_system(io, system::Particles)
-    println(io, "\tNumber of particles: $(system.N)")
+    println(io, "\tNumber of particles: $(length(system))")
     println(io, "\tDimensions: $(system.d)")
     println(io, "\tCell: $(system.box)")
     println(io, "\tDensity: $(system.density)")
     println(io, "\tTemperature: $(system.temperature)")
     println(io, "\tCell list: " * replace(string(typeof(system.cell_list)), r"\{.*" => ""))
-    println(io, "\tModel: $(system.model.name)")
     return nothing
 end
 
@@ -207,7 +206,7 @@ function load_chains(init_path; args=Dict(), verbose=false)
     else
         model =  eval(Meta.parse(input_models[1] * "()"))  # Else, append () and evaluate
     end
-    @assert isa(model, Model)
+    @assert isa(model, AbstractArray) 
     # Copy configurations nsim times (replicas)
     if haskey(args, "nsim") && !isnothing(args["nsim"]) && args["nsim"] > 1
         nsim = args["nsim"]
@@ -219,7 +218,7 @@ function load_chains(init_path; args=Dict(), verbose=false)
     end
     # Handle cell list (this is classy)
     available_species = unique(vcat(initial_species_array...))
-    maxcut = maximum([cutoff(spi, spj, model) for spi in available_species for spj in available_species])
+    maxcut = maximum([m.rcut for m in model])
     Z = mean(initial_density_array) * volume_sphere(maxcut, d)
     list_type = Z / N < 0.1 ? LinkedList : EmptyList
     if haskey(args, "list_type") && !isnothing(args["list_type"])

@@ -63,7 +63,7 @@ function write_header(io, system::Particles, t, format::LAMMPS, digits::Integer)
     println(io, "ITEM: TIMESTEP")
     println(io, t)
     println(io, "ITEM: NUMBER OF ATOMS")
-    println(io, system.N)
+    println(io, length(system))
     println(io, "ITEM: BOX BOUNDS pp pp pp")
     for i in 1:system.d
         println(io, "0.0 $(system.box[i])")
