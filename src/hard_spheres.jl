@@ -120,7 +120,7 @@ function Arianna.delta_log_target_density(x₁::Tuple{T,T}, x₂::Tuple{Bool,T},
     P, V1 = x₁
     overlaps, V2 = x₂
     overlaps && return typemin(T)
-    return - P * (V2 - V1) / system.temperature + (system.N + 1) * log(V2 / V1)
+    return - P * (V2 - V1) / system.temperature + system.N * log(V2 / V1)
 end
 
 mutable struct Barostat{T<:AbstractFloat} <: Action

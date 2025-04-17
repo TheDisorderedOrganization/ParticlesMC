@@ -12,7 +12,8 @@ NB = 4
 N = NA + NB
 M = 100
 d = 2
-temperature = 1.0
+# temperature = 1.0
+temperature = 2.0
 density = 0.5
 box = @SVector fill(typeof(temperature)((N / density)^(1 / d)), d)
 position = [[box .* @SVector rand(rng, d) for i in 1:N] for m in 1:M]
@@ -31,13 +32,13 @@ burn = 10^3
 block = [0, burn]
 callbacks = (callback_energy, callback_acceptance)
 
-path = "data/test/particles/SS142D/T$temperature/N$N/M$M/steps$steps/seed$seed"
+path = "data/test/particles/SS142D/dataset/T$temperature/N$N/M$M/steps$steps/seed$seed"
 sampletimes = build_schedule(steps, burn, block)
 algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=N),
-    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
-    (algorithm=StoreTrajectories, scheduler=sampletimes),
-    (algorithm=StoreLastFrames, scheduler=[steps]),
+    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes, store_first=false, store_last=false,),
+    (algorithm=StoreTrajectories, scheduler=sampletimes, store_first=false, store_last=false, fmt=XYZ()),
+    (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
 )
 simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
