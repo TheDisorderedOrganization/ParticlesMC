@@ -38,6 +38,8 @@ function System(position, species, molecule, density::T, temperature::T, model_m
     return system
 end
 
+get_start_end_mol(system::Particles, i::Int) = system.start_mol[i], system.start_mol[i] + system.length_mol[i] - 1
+
 function get_first_and_counts(vec::Vector{Int})
     firsts = Int[]
     counts = Int[]

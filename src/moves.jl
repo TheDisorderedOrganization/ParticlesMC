@@ -151,9 +151,10 @@ end
 
 
 ###############################################################################
-mutable struct MoleculeFlip <: Action
+mutable struct MoleculeFlip{F<:AbstractFloat} <: Action
     i::Int
     j::Int
+    δe::F
 end
 
 function Arianna.perform_action!(system::Particles, action::MoleculeFlip)
