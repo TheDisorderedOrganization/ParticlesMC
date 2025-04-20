@@ -151,14 +151,16 @@ function broadcast_dict(dicts, key)
     return [dict[key] for dict in dicts]
 end
 
-function load_chains(init_path; args=Dict(), verbose=false)
+function load_chains(init_path; args=Dict(), filename="lastframe", verbose=false)
     input_files = Vector{String}()
     if isfile(init_path)
         push!(input_files, init_path)
     elseif isdir(init_path)
         for (root, dirs, files) in walkdir(init_path)
             for file in files
-                push!(input_files, joinpath(root, file))
+                if occursin(filename, file)
+                    push!(input_files, joinpath(root, file))
+                end
             end
         end
     end
