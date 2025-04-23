@@ -26,6 +26,7 @@ function create_bond_matrix(N::Int)
     end
     return matrix
 end
+
 chains = load_chains("test/molecule.xyz", args=Dict("temperature" => [temperature], "model" => ["Trimer"], "list_type" => "LinkedList", "bonds" => create_bond_matrix(N)))
 
 model_matrix = Trimer()
@@ -34,7 +35,7 @@ pswap = 0.2
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.05)
 pool = (
-    Move(Displacement(0, zero(box), 0.0), displacement_policy, displacement_parameters, 1.0),
+    Move(Displacement(0, zero(chains[1].box), 0.0), displacement_policy, displacement_parameters, 1.0),
 )
 ## Define the simulation struct
 steps = 1000
