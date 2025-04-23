@@ -14,25 +14,6 @@ Length = 3
 d = 3
 temperature = 2.0
 density = 1.2
-box = @SVector fill(typeof(temperature)((N / density)^(1 / d)), d)
-position_1 = [box .* @SVector rand(rng, d) for i in 1:Int(N // Length), m in 1:M]
-position = []
-for r in position_1
-    push!(position, r)
-    push!(position, r .+ @SVector [0.1, 0.1, 0.1])
-    push!(position, r .- @SVector [0.1, 0.1, 0.1])
-end
-position = Vector{SVector{3,Float64}}(position)
-molecule = Vector{Int}()
-species = Vector{Int}()
-for i in 1:Int(N // Length)
-    push!(species, 1)
-    push!(species, 2)
-    push!(species, 3)
-    push!(molecule, i)
-    push!(molecule, i)
-    push!(molecule, i)
-end
 
 function create_bond_matrix(N::Int)
     # Create a vector to store the SVectors, each containing a pair of integers
@@ -45,12 +26,10 @@ function create_bond_matrix(N::Int)
     end
     return matrix
 end
-
+chains = load_chains("test/molecule.xyz", args=Dict("temperature" => [temperature], "model" => ["Trimer"], "list_type" => "LinkedList", "bonds" => create_bond_matrix(N)))
 
 model_matrix = Trimer()
-bonds = create_bond_matrix(N)
-chains = [System(position, species, molecule, density, temperature, model_matrix, bonds; list_type=LinkedList) for _ in 1:M]
-## Define moves and combine them into a pool
+
 pswap = 0.2
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.05)
