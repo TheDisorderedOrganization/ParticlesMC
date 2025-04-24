@@ -20,7 +20,7 @@ function Arianna.write_system(io, system::Particles)
     println(io, "\tCell: $(system.box)")
     println(io, "\tDensity: $(system.density)")
     println(io, "\tTemperature: $(system.temperature)")
-    println(io, "\tCell list: " * replace(string(typeof(system.cell_list)), r"\{.*" => ""))
+    println(io, "\tNeighbour list: " * replace(string(typeof(system.neighbour_list)), r"\{.*" => ""))
     return nothing
 end
 
