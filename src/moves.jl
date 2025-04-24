@@ -35,13 +35,13 @@ end
 
 function perform_action!(system::Particles, action::Displacement)
     neighbour_list = get_neighbour_list(system)
-    e₁ = destroy_particle!(system, action.i, neighbour_list)
+    e₁ = compute_energy_particle(system, action.i, neighbour_list)
     update_position!(system, action)
     c, c2 = old_new_cell(system, action.i, neighbour_list)
     if c != c2
-        update_cell_list!(action.i, c, c2, neighbour_list)
+        update_neighbour_list!(action.i, c, c2, neighbour_list)
     end
-    e₂ = create_particle!(system, action.i, neighbour_list)
+    e₂ = compute_energy_particle(system, action.i, neighbour_list)
     action.δe = e₂ - e₁
     return e₁, e₂
 end
@@ -52,7 +52,7 @@ function Arianna.revert_action!(system::Particles, action::Displacement)
     system.energy[1] -= action.δe
     c, c2 = old_new_cell(system, action.i, neighbour_list)
     if c != c2
-        update_cell_list!(action.i, c, c2, neighbour_list)
+        update_neighbour_list!(action.i, c, c2, neighbour_list)
     end
 end
 
@@ -87,12 +87,12 @@ mutable struct DiscreteSwap <: Action
 end
 
 function swap_particle_species!(system::Particles, spi, i, spj, j)
-    e₁ᵢ = destroy_particle!(system, i, system.cell_list)
-    e₁ⱼ = destroy_particle!(system, j, system.cell_list)
+    e₁ᵢ = compute_energy_particle(system, i, system.neighbour_list)
+    e₁ⱼ = compute_energy_particle(system, j, system.neighbour_list)
     system.species[i] = spj
     system.species[j] = spi
-    e₂ᵢ = create_particle!(system, i, system.cell_list)
-    e₂ⱼ = create_particle!(system, j, system.cell_list)
+    e₂ᵢ = compute_energy_particle(system, i, system.neighbour_list)
+    e₂ⱼ = compute_energy_particle(system, j, system.neighbour_list)
     return e₁ᵢ + e₁ⱼ, e₂ᵢ + e₂ⱼ
 end
 
