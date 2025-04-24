@@ -39,7 +39,7 @@ export Model
 export Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer
 export NeighbourList, LinkedList, CellList, EmptyList
 export Atoms, Molecules
-export Displacement, DiscreteSwap
+export Displacement, DiscreteSwap, MoleculeFlip
 export fold_back, System
 export SimpleGaussian, DoubleUniform, EnergyBias
 export sample_action!, log_proposal_density, reward, invert_action!, delta_log_target_density
