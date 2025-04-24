@@ -4,7 +4,6 @@ using Distributions
 using Random
 using StaticArrays
 using ComponentArrays
-using PProf, Profile
 
 seed = 42
 rng = Xoshiro(seed)
@@ -28,9 +27,6 @@ function create_bond_matrix(N::Int)
 end
 
 chains = load_chains("test/molecule.xyz", args=Dict("temperature" => [temperature], "model" => ["Trimer"], "list_type" => "LinkedList", "bonds" => create_bond_matrix(N)))
-
-model_matrix = Trimer()
-
 pswap = 0.2
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.05)

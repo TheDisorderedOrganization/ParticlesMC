@@ -14,7 +14,7 @@ struct Molecules{D,  VS<:AbstractVector, C<:NeighbourList, T<:AbstractFloat, SM<
     Nmol::Int
     box::SVector{D,T}
     local_energy::Vector{T}
-    cell_list::C
+    neighbour_list::C
     bonds::Vector{Vector{Int}}
 end
 
@@ -30,10 +30,10 @@ function System(position, species, molecule, density::T, temperature::T, model_m
     local_energy = zeros(T, N)
     energy = zeros(T, 1)
     maxcut = maximum([model.rcut for model in model_matrix])
-    cell_list = list_type(box, maxcut, N)
-    system = Molecules(position, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, local_energy, cell_list, bonds)
-    build_cell_list!(system, system.cell_list)
-    system.local_energy .= [compute_local_energy(system, i, cell_list) for i in eachindex(position)]
+    neighbour_list = list_type(box, maxcut, N)
+    system = Molecules(position, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, local_energy, neighbour_list, bonds)
+    build_neighbour_list!(system)
+    system.local_energy .= [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
     system.energy[1] = sum(system.local_energy) / 2
     return system
 end
@@ -109,7 +109,7 @@ function compute_energy_bonded_i(system::Molecules, i, position_i, bonds_i)
     return energy_bonded_i
 end
 
-function compute_local_energy(system::Molecules, i, ::EmptyList)
+function compute_energy_particle(system::Molecules, i, ::EmptyList)
     energy = zero(typeof(system.density))
     position_i = system.position[i]
     bonds_i = system.bonds[i]
@@ -119,148 +119,40 @@ function compute_local_energy(system::Molecules, i, ::EmptyList)
     return energy
 end
 
-function destroy_particle!(system::Molecules, i, ::EmptyList)
-    energy = zero(typeof(system.density))
-    position_i = system.position[i]
-    bonds_i = system.bonds[i]
-    # Loop over particles
-    @inbounds for j in eachindex(system)
-        energy += check_compute_energy_ij(system, i, j, position_i, bonds_i)
-    end
-    return energy
-end
-
-function create_particle!(system::Molecules, i, ::EmptyList)
-    energy_i = zero(typeof(system.density))
-    position_i = get_position(system, i)
-    bonds_i = system.bonds[i]
-    # Loop over particles
-    @inbounds for j in eachindex(system)
-        energy_i += check_compute_energy_ij(system, i, j, position_i, bonds_i)
-    end
-    return energy_i
-end
-
-function compute_local_energy(system::Molecules, i, cell_list::LinkedList)
-    energy_i = zero(typeof(system.density))
-    position_i = system.position[i]
-    mc = get_cell(position_i, cell_list)
-    # Scan the neighbourhood of cell mc (including itself)
-    bonds_i = system.bonds[i]
-    energy_i += compute_energy_bonded_i(system, i, position_i, bonds_i)
-    @inbounds for mc2 in Iterators.product(map(x -> x-1:x+1, mc)...)
-        # Calculate the scalar cell index of the neighbour cell (with PBC)
-        c2 = cell_index(cell_list, mc2)
-        # Scan atoms in cell c2
-        j = cell_list.head[c2]
-        while (j != -1)
-            energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
-            j = cell_list.list[j]
-        end
-    end
-    return energy_i
-end
-
-
 # With linked list
-function destroy_particle!(system::Molecules, i, cell_list::LinkedList)
+function compute_energy_particle(system::Molecules, i, neighbour_list::LinkedList)
     energy_i = zero(typeof(system.density))
     # Get cell of particle i
     position_i = system.position[i]
-    mc = get_cell(position_i, cell_list)
-    c = cell_index(cell_list, mc)
+    c = get_cell_index(i, neighbour_list)
+    neighbour_cells = neighbour_list.neighbour_cells[c]
     # Scan the neighbourhood of cell mc (including itself)
     bonds_i = system.bonds[i]
     energy_i += compute_energy_bonded_i(system, i, position_i, bonds_i)
-    @inbounds for mc2 in Iterators.product(map(x -> x-1:x+1, mc)...)
+    @inbounds for c2 in neighbour_cells
         # Calculate the scalar cell index of the neighbour cell (with PBC)
-        c2 = cell_index(cell_list, mc2)
-        j = cell_list.head[c2]
+        j = neighbour_list.head[c2]
         while (j != -1)
             energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
-            j = cell_list.list[j]
+            j = neighbour_list.list[j]
         end
     end
     return energy_i
 end
 
-function create_particle!(system::Molecules, i, cell_list::LinkedList)
-    energy_i = zero(typeof(system.density))
-    # Get cell of particle i
-    position_i = system.position[i]
-    mc = get_cell(position_i, cell_list)
-    # Scan the neighbourhood of cell mc (including itself)
-    bonds_i = system.bonds[i]
-    energy_i += compute_energy_bonded_i(system, i, position_i, bonds_i)
-    @inbounds for mc2 in Iterators.product(map(x -> x-1:x+1, mc)...)
-        # Calculate the scalar cell index of the neighbour cell (with PBC)
-        c2 = cell_index(cell_list, mc2)
-        # Scan atoms in cell c2
-        j = cell_list.head[c2]
-        while (j != -1)
-            energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
-            j = cell_list.list[j]
-        end
-    end
-    return energy_i
-end
-
-
-function compute_local_energy(system::Molecules, i, cell_list::CellList)
+function compute_energy_particle(system::Molecules, i, neighbour_list::CellList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
-    mc = get_cell(position_i, cell_list)
+    c = get_cell_index(i, neighbour_list)
+    neighbour_cells = neighbour_list.neighbour_cells[c]
     # Scan the neighbourhood of cell mc (including itself)
     bonds_i = system.bonds[i]
     energy_i += compute_energy_bonded_i(system, i, position_i, bonds_i)
-    @inbounds for mc2 in Iterators.product(map(x -> x-1:x+1, mc)...)
-        # Calculate the scalar cell index of the neighbour cell (with PBC)
-        c2 = cell_index(cell_list, mc2)
+    @inbounds for c2 in neighbour_cells
         # Scan atoms in cell c2
-        for j in cell_list.cells[c2]
-            energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
-        end
-    end
-    return energy_i
-end
-
-# With linked list
-function destroy_particle!(system::Molecules, i, cell_list::CellList)
-    # Get cell of particle i
-    energy_i = zero(typeof(system.density))
-    position_i = get_position(system, i)
-    mc = get_cell(position_i, cell_list)
-    bonds_i = system.bonds[i]
-    energy_i += compute_energy_bonded_i(system, i, position_i, bonds_i)
-    # Scan the neighbourhood of cell mc (including itself)
-    @inbounds for mc2 in Iterators.product(map(x -> x-1:x+1, mc)...)
-        # Calculate the scalar cell index of the neighbour cell (with PBC)
-        c2 = cell_index(cell_list, mc2)
-        # Scan atoms in cell c2
-        neighbours = cell_list.cells[c2]
+        neighbours = neighbour_list.cells[c2]
         @inbounds for j in neighbours
             energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
-        end
-    end
-    return energy_i
-end
-
-function create_particle!(system::Molecules, i, cell_list::CellList)
-    energy_i = zero(typeof(system.density))
-    # Get cell of particle i
-    position_i = get_position(system, i)
-    mc = get_cell(position_i, cell_list)
-    bonds_i = system.bonds[i]
-    energy_i += compute_energy_bonded_i(system, i, position_i, bonds_i)
-    # Scan the neighbourhood of cell mc (including itself)
-    @inbounds for mc2 in Iterators.product(map(x -> x-1:x+1, mc)...)
-        # Calculate the scalar cell index of the neighbour cell (with PBC)
-        c2 = cell_index(cell_list, mc2)
-        # Scan atoms in cell c2
-        neighbours = cell_list.cells[c2]
-        @inbounds for j in neighbours
-            energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
-
         end
     end
     return energy_i

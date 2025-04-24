@@ -36,7 +36,7 @@ pswap = 0.0
 displacement_policy = SimpleGaussian()
 displacement_parameters = ComponentArray(σ=0.05)
 pool = (
-    Move(Displacement(0, zero(system.box)), displacement_policy, displacement_parameters, 1 - pswap),
+    Move(Displacement(0, zero(system.box), 0.0), displacement_policy, displacement_parameters, 1 - pswap),
 )
 
 algorithm_list = (
@@ -66,9 +66,9 @@ displacement_parameters = ComponentArray(σ=0.05)
 swap_policy = DoubleUniform()
 swap_parameters = Vector{Float64}()
 pool = (
-    Move(Displacement(0, zero(system.box)), displacement_policy, displacement_parameters, 1 - pswap),
-    Move(DiscreteSwap(0, 0, (1, 3), (NA, NC)), swap_policy, swap_parameters, pswap / 2),
-    Move(DiscreteSwap(0, 0, (2, 3), (NB, NC)), swap_policy, swap_parameters, pswap / 2),
+    Move(Displacement(0, zero(system.box), 0.0), displacement_policy, displacement_parameters, 1 - pswap),
+    Move(DiscreteSwap(0, 0, (1, 3), (NA, NC), 0.0), swap_policy, swap_parameters, pswap / 2),
+    Move(DiscreteSwap(0, 0, (2, 3), (NB, NC), 0.0), swap_policy, swap_parameters, pswap / 2),
 )
 algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system.N),
@@ -99,9 +99,9 @@ swap_BC_policy = EnergyBias()
 swap_AC_parameters = ComponentArray(θ₁=1.0, θ₂=0.5)
 swap_BC_parameters = ComponentArray(θ₁=0.5, θ₂=4.0)
 pool = (
-    Move(Displacement(0, zero(system.box)), displacement_policy, displacement_parameters, 1 - pswap),
-    Move(DiscreteSwap(0, 0, (1, 3), (NA, NC)), swap_AC_policy, swap_AC_parameters, pswap / 2),
-    Move(DiscreteSwap(0, 0, (2, 3), (NB, NC)), swap_BC_policy, swap_BC_parameters, pswap / 2),
+    Move(Displacement(0, zero(system.box), 0.0), displacement_policy, displacement_parameters, 1 - pswap),
+    Move(DiscreteSwap(0, 0, (1, 3), (NA, NC), 0.0), swap_AC_policy, swap_AC_parameters, pswap / 2),
+    Move(DiscreteSwap(0, 0, (2, 3), (NB, NC), 0.0), swap_BC_policy, swap_BC_parameters, pswap / 2),
 )
 algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system.N),

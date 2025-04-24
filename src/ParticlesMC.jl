@@ -7,7 +7,7 @@ abstract type Particles <: AriannaSystem end
 
 
 include("utils.jl")
-include("cell_list.jl")
+include("neighbours.jl")
 include("models.jl")
 include("molecules.jl")
 include("atoms.jl")
@@ -18,7 +18,7 @@ get_species(system::Particles, i::Int) = @inbounds system.species[i]
 get_model(system::Particles, i::Int, j::Int) = @inbounds system.model_matrix[get_species(system, i), get_species(system, j)]
 get_local_energy(system::Particles, i::Int) = @inbounds system.local_energy[i]
 get_box(system::Particles) = system.box
-get_neighbour_list(system::Particles) = system.cell_list
+get_neighbour_list(system::Particles) = system.neighbour_list
 Base.length(system::Particles) = system.N
 Base.eachindex(system::Particles) = Base.OneTo(length(system))
 Base.getindex(system::Atoms, i::Int) = system.position[i], system.species[i], system.local_energy[i]
@@ -28,16 +28,8 @@ function Base.iterate(system::Union{Atoms, Molecules}, state=1)
     return (system.position[state], state + 1)  # Return element & next state
 end
 
-function compute_local_energy(system::Particles, i)
-    return compute_local_energy(system, i, system.cell_list)
-end
-
-function destroy_particle!(system::Particles, i)
-    return destroy_particle!(system, i, system.cell_list)
-end
-
-function create_particle!(system::Particles, i)
-    return destroy_particle!(system, i, system.cell_list)
+function compute_energy_particle(system::Particles, i)
+    return compute_energy_particle(system, i, system.neighbour_list)
 end
 
 
