@@ -1,5 +1,16 @@
 using ComponentArrays
 
+function Arianna.perform_action!(system::Particles, action::Action)
+    e₁, e₂ = perform_action!(system, action)
+    if isinf(e₂)
+        action.δe = zero(typeof(system.energy[1]))
+    else
+        action.δe = e₂ - e₁
+        system.energy[1] += action.δe
+    end
+    return e₁, e₂
+end
+
 ###############################################################################
 # SIMPLE DISPLACEMENT
 
@@ -22,7 +33,7 @@ function update_position!(system::Particles, action::Displacement)
     @inbounds system.position[action.i] = system.position[action.i] + action.δ
 end
 
-function Arianna.perform_action!(system::Particles, action::Displacement)
+function perform_action!(system::Particles, action::Displacement)
     neighbour_list = get_neighbour_list(system)
     e₁ = destroy_particle!(system, action.i, neighbour_list)
     update_position!(system, action)
@@ -32,7 +43,6 @@ function Arianna.perform_action!(system::Particles, action::Displacement)
     end
     e₂ = create_particle!(system, action.i, neighbour_list)
     action.δe = e₂ - e₁
-    system.energy[1] += action.δe
     return e₁, e₂
 end
 
@@ -92,12 +102,11 @@ function update_species_list!(species_list, swap_species, i, j)
     species_list.sp_heads[i], species_list.sp_heads[j] = species_list.sp_heads[j], species_list.sp_heads[i]
 end
 
-function Arianna.perform_action!(system::Particles, action::DiscreteSwap)
+function perform_action!(system::Particles, action::DiscreteSwap)
     i, j = action.i, action.j
     spi, spj = get_species(system, i), get_species(system, j)
     e₁, e₂ = swap_particle_species!(system, spi, i, spj, j)
     action.δe = e₂ - e₁
-    system.energy[1] += action.δe
     update_species_list!(system.species_list, action.species, i, j)
     return e₁, e₂
 end
@@ -157,12 +166,11 @@ mutable struct MoleculeFlip{F<:AbstractFloat} <: Action
     δe::F
 end
 
-function Arianna.perform_action!(system::Particles, action::MoleculeFlip)
+function perform_action!(system::Particles, action::MoleculeFlip)
     i, j = action.i, action.j
     spi, spj = system.species[i], system.species[j]
     e₁, e₂ = swap_particle_species!(system, spi, i, spj, j)
     action.δe = e₂ - e₁
-    system.energy[1] += action.δe
     return e₁, e₂
 end
 
