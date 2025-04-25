@@ -178,6 +178,13 @@ function Arianna.invert_action!(action::MoleculeFlip, ::Molecules)
     action.i, action.j = action.j, action.i
 end
 
+function Arianna.revert_action!(system::Particles, action::MoleculeFlip)
+    i, j = action.i, action.j
+    spi, spj = get_species(system, i), get_species(system, j)
+    system.species[j], system.species[i] = spi, spj
+    system.energy[1] -= action.δe
+end
+
 function reward(::MoleculeFlip, system::Particles)
     return one(typeof(system.temperature))
 end
