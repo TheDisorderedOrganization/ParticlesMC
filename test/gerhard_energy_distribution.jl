@@ -11,8 +11,8 @@ chains_ll = load_chains("test/config_0.lmp", args=Dict("temperature" => [0.231],
 system = chains[1]
 system_ll = chains_ll[1]
 # GERHARD: -2.676832
-@show mean(system.local_energy) / 2
-@show mean(system_ll.local_energy) / 2
+@show system.energy[1]
+@show system_ll.energy[1]
 chains_bkp = deepcopy(chains)
 chains_ll_bkp = deepcopy(chains_ll)
 

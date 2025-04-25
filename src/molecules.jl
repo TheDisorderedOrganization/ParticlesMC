@@ -13,7 +13,6 @@ struct Molecules{D,  VS<:AbstractVector, C<:NeighbourList, T<:AbstractFloat, SM<
     N::Int
     Nmol::Int
     box::SVector{D,T}
-    local_energy::Vector{T}
     neighbour_list::C
     bonds::Vector{Vector{Int}}
 end
@@ -27,14 +26,17 @@ function System(position, species, molecule, density::T, temperature::T, model_m
     molecule_species = something(molecule_species, ones(Int, N))
     d = length(Array(position)[1])
     box = @SVector fill(T((N / density)^(1 / d)), d)
-    local_energy = zeros(T, N)
     energy = zeros(T, 1)
     maxcut = maximum([model.rcut for model in model_matrix])
     neighbour_list = list_type(box, maxcut, N)
-    system = Molecules(position, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, local_energy, neighbour_list, bonds)
+    system = Molecules(position, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, neighbour_list, bonds)
     build_neighbour_list!(system)
-    system.local_energy .= [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
-    system.energy[1] = sum(system.local_energy) / 2
+    local_energy = [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
+    energy = mean(local_energy) / 2
+    if isinf(energy) || isnan(energy)
+        error("Initial configuration has infinite or NaN energy.")
+    end
+    system.energy[1] = energy
     return system
 end
 

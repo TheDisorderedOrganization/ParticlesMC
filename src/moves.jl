@@ -2,7 +2,7 @@ using ComponentArrays
 
 function Arianna.perform_action!(system::Particles, action::Action)
     e₁, e₂ = perform_action!(system, action)
-    if isinf(e₂)
+    if isinf(e₁) || isinf(e₂)
         action.δe = zero(typeof(system.energy[1]))
     else
         action.δe = e₂ - e₁
@@ -141,15 +141,21 @@ end
 struct EnergyBias <: Policy end
 
 function Arianna.log_proposal_density(action::DiscreteSwap, ::EnergyBias, parameters, system::Particles)
-    numerator = parameters.θ₁ * system.local_energy[action.i] + parameters.θ₂ * system.local_energy[action.j]
-    log_sum_exp_1 = log(sum(exp.(parameters.θ₁ .* system.local_energy[system.species_list.sp_ids[action.species[1]]])))
-    log_sum_exp_2 = log(sum(exp.(parameters.θ₂ .* system.local_energy[system.species_list.sp_ids[action.species[2]]])))
+    energy_particle_i = compute_energy_particle(system, action.i, system.neighbour_list)
+    energy_particle_j = compute_energy_particle(system, action.j, system.neighbour_list)
+    numerator = parameters.θ₁ * energy_particle_i+ parameters.θ₂ * energy_particle_j
+    energy_particle_1 = compute_energy_particle(system, system.species_list.sp_ids[action.species[1]], system.neighbour_list)
+    energy_particle_2 = compute_energy_particle(system, system.species_list.sp_ids[action.species[1]], system.neighbour_list)
+    log_sum_exp_1 = log(sum(exp.(parameters.θ₁ .* energy_particle_1)))
+    log_sum_exp_2 = log(sum(exp.(parameters.θ₂ .* energy_particle_1)))
     return numerator - log_sum_exp_1 - log_sum_exp_2
 end
 
 function Arianna.sample_action!(action::DiscreteSwap, ::EnergyBias, parameters, system::Particles, rng)
-    w1s = exp.(parameters.θ₁ .* system.local_energy[system.species_list.sp_ids[action.species[1]]])
-    w2s = exp.(parameters.θ₂ .* system.local_energy[system.species_list.sp_ids[action.species[2]]])
+    energy_particle_1 = compute_energy_particle(system, system.species_list.sp_ids[action.species[1]], system.neighbour_list)
+    energy_particle_2 = compute_energy_particle(system, system.species_list.sp_ids[action.species[1]], system.neighbour_list)
+    w1s = exp.(parameters.θ₁ .* energy_particle_1)
+    w2s = exp.(parameters.θ₂ .* energy_particle_2)
     w1s .= w1s ./ sum(w1s)
     w2s .= w2s ./ sum(w2s)
     id1 = rand(rng, Categorical(w1s))
