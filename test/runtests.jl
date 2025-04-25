@@ -17,8 +17,8 @@ using DelimitedFiles
     @test system_el.temperature == system_ll.temperature
     @test all.(system_el.position == system_ll.position)
     @test all.(system_el.species == system_ll.species)
-    energy_el = system_el.energy[1]
-    energy_ll = system_ll.energy[1]
+    energy_el = system_el.energy[1] / length(system_el)
+    energy_ll = system_ll.energy[1] / length(system_ll)
     @test isapprox(energy_el, -2.676832, atol=1e-6)
     @test isapprox(energy_ll, -2.676832, atol=1e-6)
 
@@ -118,8 +118,8 @@ end
     @test all.(system_el.position == system_ll.position)
     @test all.(system_el.species == system_ll.species)
     @test all.(system_el.bonds == system_ll.bonds)
-    energy_el = system_el.energy[1]
-    energy_ll = system_ll.energy[1]
+    energy_el = system_el.energy[1] / length(system_el)
+    energy_ll = system_ll.energy[1] / length(system_ll)
     @test isapprox(energy_el, 25.65865662277199, atol=1e-6)
     @test isapprox(energy_ll, 25.65865662277199, atol=1e-6)
 

@@ -25,7 +25,7 @@ function System(position, species, density::T, temperature::T, model_matrix; lis
     system = Atoms(position, species, density, energy, temperature, model_matrix, N, d, box, neighbour_list, species_list)
     build_neighbour_list!(system)
     local_energy = [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
-    energy = mean(local_energy) / 2
+    energy = sum(local_energy) / 2
     if isinf(energy) || isnan(energy)
         error("Initial configuration has infinite or NaN energy.")
     end
