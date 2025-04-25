@@ -31,7 +31,7 @@ function System(position, species, molecule, density::T, temperature::T, model_m
     energy = zeros(T, 1)
     maxcut = maximum([model.rcut for model in model_matrix])
     neighbour_list = list_type(box, maxcut, N)
-    system = Molecules(position, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, local_energy, neighbour_list, bonds)
+    system = Molecules(position, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, neighbour_list, bonds)
     build_neighbour_list!(system)
     system.local_energy .= [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
     system.energy[1] = sum(system.local_energy) / 2

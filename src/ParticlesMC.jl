@@ -16,12 +16,11 @@ include("moves.jl")
 get_position(system::Particles, i::Int) = @inbounds system.position[i]
 get_species(system::Particles, i::Int) = @inbounds system.species[i]
 get_model(system::Particles, i::Int, j::Int) = @inbounds system.model_matrix[get_species(system, i), get_species(system, j)]
-get_local_energy(system::Particles, i::Int) = @inbounds system.local_energy[i]
 get_box(system::Particles) = system.box
 get_neighbour_list(system::Particles) = system.neighbour_list
 Base.length(system::Particles) = system.N
 Base.eachindex(system::Particles) = Base.OneTo(length(system))
-Base.getindex(system::Atoms, i::Int) = system.position[i], system.species[i], system.local_energy[i]
+Base.getindex(system::Atoms, i::Int) = system.position[i], system.species[i]
 
 function Base.iterate(system::Union{Atoms, Molecules}, state=1)
     state > length(system) && return nothing  # Stop iteration

@@ -25,7 +25,7 @@ function System(position, species, density::T, temperature::T, model_matrix; lis
     maxcut = maximum([model.rcut for model in model_matrix])
     neighbour_list = list_type(box, maxcut, N)
     species_list = isa(species[1], Integer) ? SpeciesList(species) : nothing
-    system = Atoms(position, species, density, energy, temperature, model_matrix, N, d, box, local_energy, neighbour_list, species_list)
+    system = Atoms(position, species, density, energy, temperature, model_matrix, N, d, box, neighbour_list, species_list)
     build_neighbour_list!(system)
     system.local_energy .= [compute_energy_particle(system, i) for i in eachindex(system)]
     system.energy[1] = sum(system.local_energy) / 2
