@@ -1,4 +1,4 @@
-struct Atoms{D, Q, V<:AbstractVector, C<:NeighbourList, H, T<:AbstractFloat, SM<:AbstractArray} <: Particles
+struct Atoms{D, V<:AbstractVector, C<:NeighbourList, H, T<:AbstractFloat, SM<:AbstractArray} <: Particles
     position::Vector{SVector{D,T}}
     species::V
     density::T
@@ -8,7 +8,6 @@ struct Atoms{D, Q, V<:AbstractVector, C<:NeighbourList, H, T<:AbstractFloat, SM<
     N::Int
     d::Int
     box::SVector{D,T}
-    local_energy::MVector{Q, T}
     neighbour_list::C
     species_list::H
 end
@@ -20,15 +19,17 @@ function System(position, species, density::T, temperature::T, model_matrix; lis
     d = length(Array(position)[1])
     energy = Vector{T}(undef, 1)
     box = @SVector fill(T((N / density)^(1 / d)), d)
-    local_energy = MVector{N, T}(zeros(T, N))
-    indices = MVector{N, Bool}(falses(N))
     maxcut = maximum([model.rcut for model in model_matrix])
     neighbour_list = list_type(box, maxcut, N)
     species_list = isa(species[1], Integer) ? SpeciesList(species) : nothing
     system = Atoms(position, species, density, energy, temperature, model_matrix, N, d, box, neighbour_list, species_list)
     build_neighbour_list!(system)
-    system.local_energy .= [compute_energy_particle(system, i) for i in eachindex(system)]
-    system.energy[1] = sum(system.local_energy) / 2
+    local_energy = [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
+    energy = mean(local_energy) / 2
+    if isinf(energy) || isnan(energy)
+        error("Initial configuration has infinite or NaN energy.")
+    end
+    system.energy[1] = energy
     return system
 end
 

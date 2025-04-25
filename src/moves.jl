@@ -2,7 +2,7 @@ using ComponentArrays
 
 function Arianna.perform_action!(system::Particles, action::Action)
     e₁, e₂ = perform_action!(system, action)
-    if isinf(e₂)
+    if isinf(e₁) || isinf(e₂)
         action.δe = zero(typeof(system.energy[1]))
     else
         action.δe = e₂ - e₁
