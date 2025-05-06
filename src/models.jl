@@ -28,13 +28,12 @@ harmonic_spheres(r2, ϵ, σ2) = ϵ * (1 - r2 / σ2)
 inverse_power(r2, ϵ, σ2, ndiv2) = ϵ * (σ2 / r2)^(ndiv2)
 
 @inline function lennard_jones(r2::T, ϵ4::T, σ2::T) where T<:AbstractFloat
-    inv_r2 = inv(r2)
-    # Compute (σ²/r²)³ = (σ/r)⁶ once
-    σ6_r6 = (σ2 * inv_r2) ^ 3
-    return ϵ4 * (σ6_r6 ^ 2 - σ6_r6)
+    x = σ2 * inv(r2)
+    x3 = x * x * x  # (σ²/r²)^3
+    return ϵ4 * (x3 * x3 - x3)
 end
 
-fene(r2, kr02, r02) = kr02 * log(1 - r2 / r02)
+fene(r2, kr02, r02) = kr02 * log(1 - r2 * inv(r02))
 
 ###############################################################################
 """
@@ -200,20 +199,15 @@ function GeneralKG(ϵ, σ, k, r0; rcut=2^(1 / 6) * σ)
     return GeneralKG(name, ϵ, 4ϵ, σ2, shift, k, kr02, r02, rcut, rcut2)
 end
 
-function potential(r2, model::GeneralKG)
+@inline function potential(r2::T, model::GeneralKG) where T<:AbstractFloat
     return lennard_jones(r2, model.ϵ4, model.σ2) - model.shift
 end
 
-function bond_potential(r2, model::GeneralKG)
-    r02 = model.r02
-    if r2 ≤ r02
-        res = fene(r2, model.kr02, r02)
-    else
-        res = Inf
-    end
-    return res
+@inline function bond_potential(r2::T, model::GeneralKG) where T<:AbstractFloat
+    return r2 ≤ model.r02 ? fene(r2, model.kr02, model.r02) : Inf
 end
 
+cutoff(model::DiscreteModel) = model.rcut
 cutoff2(model::DiscreteModel) = model.rcut2
 
 function Trimer()
