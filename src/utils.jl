@@ -13,30 +13,16 @@ function vector_1D(c1, c2, side_length)
     return dx - round(dx / side_length) * side_length
 end
 
-#Taken and adapted from Molly.jl
-function vector(c1::SVector{2,T}, c2::SVector{2,T}, box::SVector{2,T}) where {T<:AbstractFloat}
-    return @inbounds SVector(
-        vector_1D(c1[1], c2[1], box[1]),
-        vector_1D(c1[2], c2[2], box[2]),
-    )
+@inline function vector(c1::SVector{N,T}, c2::SVector{N,T}, box::SVector{N,T}) where {N, T<:AbstractFloat}
+    @inbounds return SVector{N,T}(ntuple(i -> vector_1D(c1[i], c2[i], box[i]), Val(N)))
 end
 
-
-#Taken and adapted from Molly.jl
-function vector(c1::SVector{3,T}, c2::SVector{3,T}, box::SVector{3,T}) where {T<:AbstractFloat}
-    return @inbounds SVector(
-        vector_1D(c1[1], c2[1], box[1]),
-        vector_1D(c1[2], c2[2], box[2]),
-        vector_1D(c1[3], c2[3], box[3]),
-    )
+@inline function nearest_image_distance_squared(xi::SVector{N,T}, xj::SVector{N,T},
+                                                box::SVector{N,T}) where {N, T<:AbstractFloat}
+    @inbounds dx = vector(xi, xj, box)
+    return sum(abs2, dx)
 end
 
-
-function nearest_image_distance_squared(xi::SVector{N,T}, xj::SVector{N,T},
-                                        box::SVector{N,T}) where {N,T<:AbstractFloat}
-    dx = vector(xi, xj, box)
-    return sum(abs2, dx)             # Sum of squared elements
-end
 
 struct SpeciesList
     sp_ids::Vector{Vector{Int}}
