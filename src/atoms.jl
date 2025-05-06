@@ -45,10 +45,6 @@ function compute_energy_ij(system::Atoms, i, j, position_i)
 end
 
 
-function compute_energy_particle(system::Atoms, i)
-    return compute_energy_particle(system, i, system.neighbour_list)
-end
-
 function compute_energy_particle(system::Atoms, i, ::EmptyList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
