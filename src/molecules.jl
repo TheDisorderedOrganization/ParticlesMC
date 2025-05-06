@@ -18,6 +18,9 @@ struct Molecules{D,  VS<:AbstractVector, C<:NeighbourList, T<:AbstractFloat, SM<
 end
 
 
+struct Bonded end
+struct NonBonded end
+
 function System(position, species, molecule, density::T, temperature::T, model_matrix, bonds; molecule_species=nothing, list_type=EmptyList) where {T<:AbstractFloat}
     @assert length(position) == length(species)
     N = length(position)
@@ -71,6 +74,16 @@ function get_first_and_counts(vec::Vector{Int})
     return firsts, counts
 end
 
+function check_compute_energy_ij(system::Molecules, i, j, position_i, bonds_i)
+    # Early return using && for short-circuit evaluation
+    i == j && return zero(system.density)
+    isbonded = j ∈ bonds_i ? Bonded() : NonBonded()
+    # If i != j, compute energy directly
+    position_j = get_position(system, j)
+    model_ij = get_model(system, i, j)
+    return compute_energy_ij(system, position_i, position_j, model_ij, isbonded)
+end
+
 function check_nonbonded_compute_energy_ij(system::Molecules, i, j, position_i, bonds_i)
     # Early return using && for short-circuit evaluation
     i == j && return zero(system.density)
@@ -78,37 +91,32 @@ function check_nonbonded_compute_energy_ij(system::Molecules, i, j, position_i, 
     # If i != j, compute energy directly
     position_j = get_position(system, j)
     model_ij = get_model(system, i, j)
-    return compute_energy_ij(system, position_i, position_j, model_ij, false)
-end
-
-function check_compute_energy_ij(system::Molecules, i, j, position_i, bonds_i)
-    # Early return using && for short-circuit evaluation
-    i == j && return zero(system.density)
-    bonded = j ∈ bonds_i
-    # If i != j, compute energy directly
-    position_j = get_position(system, j)
-    model_ij = get_model(system, i, j)
-    return compute_energy_ij(system, position_i, position_j, model_ij, bonded)
-end
-
-function compute_energy_ij(system::Molecules, position_i, position_j, model_ij::Model, bonded)
-    energy_ij = zero(typeof(system.density))
-    r2 = nearest_image_distance_squared(position_i, position_j, get_box(system))
-    if r2 ≤ cutoff2(model_ij)
-        energy_ij += potential(r2, model_ij)
-    end
-    if bonded
-        energy_ij += bond_potential(r2, model_ij)
-    end
-    return energy_ij
+    return compute_energy_ij(system, position_i, position_j, model_ij, NonBonded())
 end
 
 function compute_energy_bonded_i(system::Molecules, i, position_i, bonds_i)
     energy_bonded_i = zero(typeof(system.density))
     @inbounds for j in bonds_i
-        energy_bonded_i += compute_energy_ij(system, position_i, get_position(system, j), get_model(system, i, j), true)
+        energy_bonded_i += compute_energy_ij(system, position_i, get_position(system, j), get_model(system, i, j), Bonded())
     end
     return energy_bonded_i
+end
+
+function compute_energy_ij(system::Molecules, position_i, position_j, model_ij::Model, ::Bonded)
+    box = get_box(system)
+    r2 = nearest_image_distance_squared(position_i, position_j, box)
+    energy_ij = bond_potential(r2, model_ij)
+    cutoff2_val = cutoff2(model_ij)
+    if r2 ≤ cutoff2_val
+        energy_ij += potential(r2, model_ij)
+    end
+
+    return energy_ij
+end
+function compute_energy_ij(system::Molecules, position_i, position_j, model_ij::Model, ::NonBonded)
+    r2 = nearest_image_distance_squared(position_i, position_j, get_box(system))
+    cutoff2_val = cutoff2(model_ij)
+    return r2 > cutoff2_val ? zero(typeof(system.density)) : potential(r2, model_ij)
 end
 
 function compute_energy_particle(system::Molecules, i, ::EmptyList)
@@ -127,11 +135,11 @@ function compute_energy_particle(system::Molecules, i, neighbour_list::LinkedLis
     # Get cell of particle i
     position_i = system.position[i]
     c = get_cell_index(i, neighbour_list)
-    neighbour_cells = neighbour_list.neighbour_cells[c]
+    cells = neighbour_list.neighbour_cells[c]
     # Scan the neighbourhood of cell mc (including itself)
     bonds_i = system.bonds[i]
     energy_i += compute_energy_bonded_i(system, i, position_i, bonds_i)
-    @inbounds for c2 in neighbour_cells
+    @inbounds for c2 in cells
         # Calculate the scalar cell index of the neighbour cell (with PBC)
         j = neighbour_list.head[c2]
         while (j != -1)

@@ -33,20 +33,17 @@ function System(position, species, density::T, temperature::T, model_matrix; lis
     return system
 end
 
-function check_compute_energy_ij(system::Atoms, i, j, position_i)
+function compute_energy_ij(system::Atoms, i, j, position_i)
     # Early return using && for short-circuit evaluation
     i == j && return zero(typeof(system.density))
     # If i != j, compute energy directly
     model_ij = get_model(system, i, j)
     position_j = get_position(system, j)
-    return compute_energy_ij(system, position_i, position_j, model_ij)
-end
-
-function compute_energy_ij(system::Atoms, position_i, position_j, model_ij::Model)
     r2 = nearest_image_distance_squared(position_i, position_j, get_box(system))
     r2 > cutoff2(model_ij) && return zero(typeof(system.density))
     return potential(r2, model_ij)
 end
+
 
 function compute_energy_particle(system::Atoms, i)
     return compute_energy_particle(system, i, system.neighbour_list)
@@ -56,7 +53,7 @@ function compute_energy_particle(system::Atoms, i, ::EmptyList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
     for (j, _) in enumerate(system)
-        energy_i += check_compute_energy_ij(system, i, j, position_i)
+        energy_i += compute_energy_ij(system, i, j, position_i)
     end
     return energy_i
 end
@@ -73,7 +70,7 @@ function compute_energy_particle(system::Atoms, i, neighbour_list::CellList)
         # Scan atoms in cell c2
         neighbours = neighbour_list.cells[c2]
         @inbounds for j in neighbours
-            energy_i += check_compute_energy_ij(system, i, j, position_i)
+            energy_i += compute_energy_ij(system, i, j, position_i)
         end
     end
     return energy_i
@@ -90,7 +87,7 @@ function compute_energy_particle(system::Atoms, i, neighbour_list::LinkedList)
         # Scan atoms in cell c2
         j = neighbour_list.head[c2]
         while (j != -1)
-            energy_ij = check_compute_energy_ij(system, i, j, position_i)
+            energy_ij = compute_energy_ij(system, i, j, position_i)
             energy_i += energy_ij
             j = neighbour_list.list[j]
         end
