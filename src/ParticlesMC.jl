@@ -27,8 +27,12 @@ function Base.iterate(system::Union{Atoms, Molecules}, state=1)
     return (system.position[state], state + 1)  # Return element & next state
 end
 
-function compute_energy_particle(system::Particles, i)
+function compute_energy_particle(system::Particles, i::Int)
     return compute_energy_particle(system, i, system.neighbour_list)
+end
+
+function compute_energy_particle(system::Particles, ids::AbstractVector)
+    return map(i -> compute_energy_particle(system, i), ids)
 end
 
 
