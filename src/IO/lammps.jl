@@ -5,6 +5,33 @@ struct LAMMPS <: Arianna.Format
     end
 end
 
+function store_bonds(io, system::Molecules, format::LAMMPS)
+    error("LAMMPS format does not support bonds format yet.")
+    return nothing
+end
+
+function validate_line_format(line::String, expected_columns::Vector{String})
+    split_line = split(line, " ")
+    if length(split_line) != length(expected_columns)
+        error("Line does not match the expected format. Expected columns: $(join(expected_columns, ", "))")
+    end
+    for (i, column) in enumerate(expected_columns)
+        if column == "type" || column == "molecule"
+            try
+                parse(Int, split_line[i])
+            catch
+                error("Column '$column' must be an integer. Found: $(split_line[i])")
+            end
+        elseif column in ["x", "y", "z"]
+            try
+                parse(Float64, split_line[i])
+            catch
+                error("Column '$column' must be a float. Found: $(split_line[i])")
+            end
+        end
+    end
+end
+
 function parse_column_string(column_str::AbstractString, ::LAMMPS)
     columns = split(column_str, " ")
     column_info = OrderedDict{String, Vector}() # Use OrderedDict to maintain order
@@ -23,7 +50,7 @@ function parse_column_string(column_str::AbstractString, ::LAMMPS)
                 dimension = 2
             column_info["pos"] =  [dimension, index]
             end
-        elseif (column_name == "y") ||  (column_name == "y") ||  (column_name == "ITEM:") ||  (column_name == "ATOMS") 
+        elseif (column_name == "y") ||  (column_name == "ITEM:") ||  (column_name == "ATOMS")
             continue
         else
             error("$column_name is not supported")
@@ -32,7 +59,6 @@ function parse_column_string(column_str::AbstractString, ::LAMMPS)
     end
     return column_info
 end
-
 
 function get_selrow(::LAMMPS, N, m)
     return m ≥ 0 ? (N + 9) * m - N + 1 : length(data) + m * (N + 9) + 3

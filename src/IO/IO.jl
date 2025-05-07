@@ -34,6 +34,7 @@ function load_configuration(filename::String)
         return load_configuration(io, LAMMPS())
     else
         error("Unsupported file format: $filename")
+        return nothing
     end
 end
 
@@ -53,7 +54,7 @@ function load_configuration(io, format::Arianna.Format; m=1)
             error("molecule dimension must be 1")
         end
         molecule = Vector{Int}(undef, N)
-        btype, bond = read_bonds(data, N, format)
+        bond = read_bonds(data, N, format)
     end
     if bool_species
         species_d, species_index = column_info["species"]
@@ -93,10 +94,49 @@ function load_configuration(io, format::Arianna.Format; m=1)
     )
     if bool_molecule
         config_dict[:molecule] = molecule
-        config_dict[:btype] = btype
         config_dict[:bond] = bond
     end
     return config_dict
+end
+
+function read_bonds(filename::String, N)
+    io = open(filename, "r")
+    N_bonds = parse(Int, io[1])
+    return construct_bonds_array(io[2:end], N_bonds, N)
+end
+
+function construct_bonds_array(io, N_bonds, N)
+    bond = [Vector{Int}() for _ in 1:N]
+    bond_index = 1
+    for i in 1:N_bonds
+        line = split(io[i], " ")
+        if length(line) != 2
+            error("Invalid bond format in line $i: expected two integers.")
+        end
+        try
+            atom_i, atom_j = parse.(Int, line[bond_index:bond_index+1])
+        catch
+            error("Invalid bond format in line $i: Could not parse integers.")
+        end
+        push!(bond[atom_i], atom_j)
+        push!(bond[atom_j], atom_i)
+    end
+    return bond
+end
+
+function get_model(data, i::Int, j::Int)
+    key = i <= j ? "$i-$j" : "$j-$i"
+    m = data[key]
+    if m["name"] == "GeneralKG"
+        return GeneralKG(m["epsilon"], m["sigma"], m["k"], m["r0"]; rcut = m["rcut"])
+    elseif m["name"] == "SmoothLennardJones"
+        return SmoothLennardJones(m["epsilon"], m["sigma"]; rcut = m["rcut"])
+    elseif m["name"] == "LennardJones"
+        return LennardJones(m["epsilon"], m["sigma"]; rcut = m["rcut"])
+    else
+        error("Model $(m["name"]) is not implemented")
+        return nothing
+    end
 end
 
 function read_bonds(data, N, format::Arianna.Format)
@@ -133,14 +173,15 @@ function read_bonds(data, N, format::Arianna.Format)
             else
                 btype_ij = 1
             end
-            push!(btype[atom_i], btype_ij)
-            push!(btype[atom_j], btype_ij)
+            #push!(btype[atom_i], btype_ij)
+            #push!(btype[atom_j], btype_ij)
         end
     else
         error("Bond array is not written in the $format file")
     end
-    return btype, bond
+    return bond
 end
+
 
 function missing_key_error(key)
     error(error("$key array has not been found in metadata or is not defined. Define the $key in the args Dict"))
@@ -201,12 +242,7 @@ function load_chains(init_path; args=Dict(), verbose=false)
     # Fold back into the box
     initial_position_array .= [[fold_back(x, box) for x in X] for (X, box) in zip(initial_position_array, initial_box_array)]
     # Parse model
-    if occursin(r"\(", input_models[1]) && occursin(r"\)", input_models[1])
-        model = eval(Meta.parse(input_models[1]))  # Parse the string if it has parentheses
-    else
-        model =  eval(Meta.parse(input_models[1] * "()"))  # Else, append () and evaluate
-    end
-    @assert isa(model, AbstractArray) 
+
     # Copy configurations nsim times (replicas)
     if haskey(args, "nsim") && !isnothing(args["nsim"]) && args["nsim"] > 1
         nsim = args["nsim"]
@@ -218,7 +254,17 @@ function load_chains(init_path; args=Dict(), verbose=false)
     end
     # Handle cell list (this is classy)
     available_species = unique(vcat(initial_species_array...))
-    maxcut = maximum([m.rcut for m in model])
+    n_species = length(available_species)
+    if input_models[1] isa Dict
+        model_matrix = SMatrix{n_species, n_species}([get_model(input_models[1], i, j) for i in 1:n_species, j in 1:n_species])
+    elseif occursin(r"\(", input_models[1]) && occursin(r"\)", input_models[1])
+        model_matrix = eval(Meta.parse(input_models[1]))  # Parse the string if it has parentheses
+    else
+        model_matrix =  eval(Meta.parse(input_models[1] * "()"))  # Else, append () and evaluate
+    end
+    @assert isa(model_matrix, AbstractArray)
+
+    maxcut = maximum([m.rcut for m in model_matrix])
     Z = mean(initial_density_array) * volume_sphere(maxcut, d)
     list_type = Z / N < 0.1 ? LinkedList : EmptyList
     if haskey(args, "list_type") && !isnothing(args["list_type"])
@@ -230,10 +276,10 @@ function load_chains(init_path; args=Dict(), verbose=false)
     if bool_molecule
         initial_molecule_array = broadcast_dict(config_dict, :molecule)
         initial_bond_array = broadcast_dict(config_dict, :bond)
-        initial_btype_array = broadcast_dict(config_dict, :btype)
-        chains = [System(initial_position_array[k], initial_species_array[k], initial_molecule_array[k], initial_density_array[k], initial_temperature_array[k], model, initial_bond_array[k], list_type=list_type) for k in eachindex(initial_position_array)]
+        #initial_btype_array = broadcast_dict(config_dict, :btype)
+        chains = [System(initial_position_array[k], initial_species_array[k], initial_molecule_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, initial_bond_array[k], list_type=list_type) for k in eachindex(initial_position_array)]
     else
-        chains = [System(initial_position_array[k], initial_species_array[k], initial_density_array[k], initial_temperature_array[k], model, list_type=list_type) for k in eachindex(initial_position_array)]
+        chains = [System(initial_position_array[k], initial_species_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, list_type=list_type) for k in eachindex(initial_position_array)]
     end
     verbose && println("$(length(chains)) chains created")
     return chains
@@ -255,6 +301,23 @@ function write_position(io, position, digits::Int)
     return nothing
 end
 
+function store_bonds(io, system::Molecules, format::Arianna.Format)
+    s = 0
+    for bond in system.bonds
+        s += length(bond)
+    end
+    println(io, s ÷ 2)
+    write_bonds_header(io, format)
+    for i in 1:system.N
+        for j in system.bonds[i]
+            if i < j
+                println(io, "$i $j")
+            end
+        end
+    end
+    return nothing
+end
+
 function Arianna.store_trajectory(io, system::Atoms, t, format::Arianna.Format; digits::Integer=6)
     write_header(io, system, t, format, digits)
     for (species, position) in zip(system.species, system.position)
@@ -273,5 +336,14 @@ function Arianna.store_trajectory(io, system::Molecules, t, format::Arianna.Form
     return nothing
 end
 
+function Arianna.store_lastframe(io, system::Molecules, t, format::Arianna.Format; digits::Integer=6)
+    write_header(io, system, t, format, digits)
+    for (molecule, species, position) in zip(system.molecule, system.species, system.position)
+        print(io, "$molecule $species")
+        write_position(io, position, digits)
+    end
+    store_bonds(io, system, format)
+    return nothing
+end
 
-end # module
+end # module IO
