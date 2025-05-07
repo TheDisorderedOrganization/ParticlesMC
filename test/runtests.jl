@@ -143,7 +143,7 @@ end
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
     (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=EXYZ()),
-    (algorithm=StoreLastFrames, scheduler=[steps], fmt=LAMMPS()),
+    (algorithm=StoreLastFrames, scheduler=[steps], fmt=EXYZ()),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
     )
     ## Empty List simulation
