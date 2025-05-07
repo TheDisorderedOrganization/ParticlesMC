@@ -16,5 +16,6 @@ Manifest.toml
 log_output/
 log_error/
 data/
+deps/build.log
 
 !config_0.xyz

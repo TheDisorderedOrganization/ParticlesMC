@@ -83,6 +83,11 @@ function read_bonds_header(bonds, format::EXYZ)
     return N_bonds, column_info
 end
 
+function write_bonds_header(io, ::EXYZ)
+    println(io, "Properties=bond:I:2")
+    return nothing
+end
+
 function write_header(io, system::Particles, t, format::EXYZ, digits::Integer)
     println(io, length(system))
     box_str = compute_box_str(system.box, format)

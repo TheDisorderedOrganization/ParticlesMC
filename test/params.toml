@@ -1,0 +1,38 @@
+[system]
+config = "config_0.xyz"
+temperature = 0.231
+density = 1.192060351952634
+model = "JBB"
+list_type = "LinkedList"
+
+[simulation]
+type = "Metropolis"
+steps = 1000
+seed = 10
+parallel = false
+output_path = "data/test/particles/KA2D_distribution"
+
+[[simulation.move]]
+action = "Displacement"
+probability = 1.0
+policy = "SimpleGaussian"
+parameters = {sigma = 0.05}
+
+[[simulation.output]]
+algorithm = "StoreCallbacks"
+callbacks = ["energy", "acceptance"]
+scheduler_params = {linear_interval = 100}
+
+[[simulation.output]]
+algorithm = "StoreTrajectories"
+scheduler_params = {linear_interval = 100}
+fmt = "XYZ"
+
+[[simulation.output]]
+algorithm = "StoreLastFrames"
+scheduler_params = {linear_interval = 1000}
+fmt = "XYZ"
+
+[[simulation.output]]
+algorithm = "PrintTimeSteps"
+scheduler_params = {linear_interval = 100}

@@ -131,6 +131,7 @@ end
 ###############################################################################
 
 struct SmoothLennardJones{T<:AbstractFloat} <: DiscreteModel
+    name::String
     ϵ::T
     σ::T
     ϵ4::T
@@ -150,7 +151,7 @@ function SmoothLennardJones(ϵ::T, σ::T; rcut::T=2.5*σ, name = "SmoothLennardJ
     C2_σ2 = C2 / σ2
     C4_σ4 = C4 / σ2 ^ 2
     rcut2= rcut^2
-    return SmoothLennardJones(ϵ, σ, 4ϵ, σ2, C0, C2_σ2, C4_σ4, rcut, rcut2)
+    return SmoothLennardJones(name, ϵ, σ, 4ϵ, σ2, C0, C2_σ2, C4_σ4, rcut, rcut2)
 end
 
 function potential(r2::T, model::SmoothLennardJones) where T <: AbstractFloat

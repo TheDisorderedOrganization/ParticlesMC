@@ -71,6 +71,10 @@ function read_bonds_header(bonds, format::XYZ)
     return N_bonds, column_info
 end
 
+function write_bonds_header(io, ::XYZ)
+    println(io, "columns:bond")
+    return nothing
+end
 
 function write_header(io, system::Particles, t, format::XYZ, digits::Integer)
     println(io, length(system))
