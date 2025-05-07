@@ -71,14 +71,17 @@ ParticlesMC implemented in Comonicon.
     system = params["system"]
     temperature = system["temperature"]
     density = system["density"]
-    model = system["model"]
     config = system["config"]
+    model = get(system, "model", nothing)
+    if model === nothing
+        model = params["model"]
+    end  # optional field
     if !isfile(config)
         error("Configuration file '$config' does not exist in the current path.")
     end
     list_type = get(system, "list_type", "LinkedList")  # optional field
     bonds = get(system, "bonds", nothing)  
-
+    
     # Extract simulation parameters
     sim = params["simulation"]
     steps = sim["steps"]
@@ -130,10 +133,17 @@ ParticlesMC implemented in Comonicon.
             else
                 error("Unsupported policy: $policy for action: $action")
             end
+        elseif action == "MoleculeFlip"
+            action_obj = MoleculeFlip(0, 0, 0.0)
+            param_obj = Vector{Float64}()
+            if policy == "DoubleUniform"
+                policy_obj = DoubleUniform()
+            else
+                error("Unsupported policy: $policy for action: $action")
+            end
         else
-            error("Unsupported action: $action")
+            error("Unsupported action: $action") 
         end
-
         # Build move
         move_obj = Move(action_obj, policy_obj, param_obj, prob)
         push!(pool, move_obj)
