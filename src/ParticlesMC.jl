@@ -88,7 +88,7 @@ ParticlesMC implemented in Comonicon.
     burn = get(sim, "burn", 0)
     seed = sim["seed"]
     parallel = sim["parallel"]
-    output_path = sim["output_path"]
+    output_path = get(sim, "output_path", "./")
 
     # Setup RNG and basic variables
 
@@ -187,7 +187,7 @@ ParticlesMC implemented in Comonicon.
         push!(algorithm_list, algorithm)    
     end
     M=1
-    path = joinpath(output_path, "N$(chains[1].N)/T$(chains[1].temperature)/M$M")
+    path = joinpath(output_path)
     simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
     
     # Run the simulation
