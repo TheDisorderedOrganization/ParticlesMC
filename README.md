@@ -6,7 +6,7 @@
 
   [![license](https://img.shields.io/badge/license-GPL%203.0-red.svg)](https://github.com/TheDisorderedOrganization/ParticlesMC/blob/main/LICENSE)
   [![ci](https://github.com/TheDisorderedOrganization/ParticlesMC/actions/workflows/ci.yml/badge.svg)](https://github.com/TheDisorderedOrganization/ParticlesMC/actions/workflows/ci.yml)
-  [![codecov](https://codecov.io/gh/TheDisorderedOrganization/Arianna.jl/graph/badge.svg?token=URGL1HJOOI)](https://codecov.io/gh/TheDisorderedOrganization/ParticlesMC)
+  [![codecov](https://codecov.io/gh/TheDisorderedOrganization/ParticlesMC/graph/badge.svg?token=URGL1HJOOI)](https://codecov.io/gh/TheDisorderedOrganization/ParticlesMC)
 </div>
 
 <p align="center">
