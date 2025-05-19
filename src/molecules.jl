@@ -167,3 +167,23 @@ function compute_energy_particle(system::Molecules, i, neighbour_list::CellList)
     end
     return energy_i
 end
+
+function compute_chain_correlation(system::Molecules)
+    chain_length = system.length_mol[1]
+    @assert all(x -> x == chain_length, system.length_mol) "All chains must have the same length"
+    @assert chain_length > 1 "Chains must have at least two particles"
+    polymer_array = zeros(system.Nmol, chain_length)
+    for i in 1:system.Nmol
+        start = system.start_mol[i]
+        polymer_array[i, :] = system.species[start:start+chain_length-1]
+    end
+    polymer_array[polymer_array .== 2] .= -1
+    correlation_array = Float64[]
+    for i in 1:chain_length-1
+        for j in i+1:chain_length
+            cross = sum(polymer_array[:, i] .* polymer_array[:, j]) / system.Nmol
+            push!(correlation_array, cross)
+        end
+    end
+    return sum(correlation_array.^2)
+end

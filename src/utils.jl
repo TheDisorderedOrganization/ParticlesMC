@@ -48,6 +48,9 @@ function callback_energy(simulation)
     return mean(system.energy[1] / length(system) for system in simulation.chains)
 end
 
+function callback_chain_correlation(simulation)
+    return mean(compute_chain_correlation(system) for system in simulation.chains)
+end
 
 function volume_sphere(r, d::Int)
     d == 0 && return 1
