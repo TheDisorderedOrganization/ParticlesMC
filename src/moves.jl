@@ -202,7 +202,11 @@ end
 function Arianna.sample_action!(action::MoleculeFlip, ::DoubleUniform, parameters, system::Particles, rng)
     molecule_i = rand(rng, DiscreteUniform(1, system.Nmol))
     start_mol, end_mol = get_start_end_mol(system, molecule_i)
-    action.i, action.j = sample(rng, start_mol:end_mol, 2; replace=false)
+    i, j = sample(rng, start_mol:end_mol, 2; replace=false)
+    while system.species[i] == system.species[j]
+        i, j = sample(rng, start_mol:end_mol, 2; replace=false)
+    end
+    action.i, action.j = i, j
 end
 
 ###############################################################################
