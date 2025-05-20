@@ -18,7 +18,7 @@ ParticlesMC is a Julia package for performing atomic and molecular Monte Carlo s
 </p>
 
 <p align="center">
-  This example can be reproduced by running `particlesmc params.toml` in the `data/movie/` folder . Movie generated with [OVITO](https://www.ovito.org/)
+  This example can be reproduced by running <code>particlesmc params.toml</code> in the <code>data/movie/</code> folder . Movie generated with  <a href="https://www.ovito.org/"> ovito </a>
 </p>
 
 ## Features
