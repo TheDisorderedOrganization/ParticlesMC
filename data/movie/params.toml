@@ -1,0 +1,38 @@
+[system]
+config = "inputframe.exyz"
+temperature = 1.0
+density = 1.19206
+list_type = "LinkedList"
+model = "JBB"
+
+[simulation]
+type = "Metropolis"
+steps = 50000   
+seed = 10
+parallel = false
+output_path = "./"
+
+[[simulation.move]]
+action = "Displacement"
+probability = 1.0
+policy = "SimpleGaussian"
+parameters = {sigma = 0.05}
+
+[[simulation.output]]
+algorithm = "StoreCallbacks"
+callbacks = ["energy", "acceptance"]
+scheduler_params = {linear_interval = 500}
+
+[[simulation.output]]
+algorithm = "StoreTrajectories"
+scheduler_params = {linear_interval = 500}
+fmt = "EXYZ"
+
+[[simulation.output]]
+algorithm = "StoreLastFrames"
+scheduler_params = {linear_interval = 1000}
+fmt = "EXYZ"
+
+[[simulation.output]]
+algorithm = "PrintTimeSteps"
+scheduler_params = {linear_interval = 100}
