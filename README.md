@@ -13,14 +13,12 @@
 ParticlesMC is a Julia package for performing atomic and molecular Monte Carlo simulations. It is designed to be efficient and user-friendly, making it suitable for both research and educational purposes. Built on top of the <a href="https://github.com/TheDisorderedOrganization/Arianna.jl"> Arianna </a> module, it leverages Arianna’s Monte Carlo framework.
 </p>
 
-<h1 align="center">
-  <video controls width="600">
-    <source src="https://raw.githubusercontent.com/TheDisorderedOrganization/ParticlesMC/blob/main/data/movie/movie.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-</h1>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/TheDisorderedOrganization/ParticlesMC/blob/main/data/movie/movie.gif" alt="MC simulation of a 2D liquid" width="600">
+  This example can be reproduced by running `particlesmc params.toml` in the `data/movie/` folder . Movie generated with [OVITO](https://www.ovito.org/)
+</p>
 
-This example can be reproduced by running `particlesmc params.toml` in the `data/movie/` folder . Movie generated with [OVITO](https://www.ovito.org/)
+
 
 ## Features
 
