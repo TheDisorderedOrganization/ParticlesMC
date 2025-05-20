@@ -5,7 +5,6 @@ Manifest.toml
 
 *.ipynb
 *.svg
-*.gif
 *.xyz
 *.out
 *.err
@@ -15,7 +14,8 @@ Manifest.toml
 *.cov
 log_output/
 log_error/
-data/
+data/*
 deps/build.log
 
+!data/movie/
 !config_0.xyz
