@@ -46,7 +46,7 @@ add https://github.com/TheDisorderedOrganization/ParticlesMC.git
 2. Using the Pkg API:
 ```julia
 using Pkg
-Pkg.add("https://github.com/TheDisorderedOrganization/ParticlesMC.git")
+Pkg.add(url="https://github.com/TheDisorderedOrganization/ParticlesMC.git")
 ```
 
 ### Building ParticlesMC
