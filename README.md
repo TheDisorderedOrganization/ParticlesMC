@@ -18,7 +18,7 @@ ParticlesMC is a Julia package for performing atomic and molecular Monte Carlo s
 </p>
 
 <p align="center">
-  MC simulation of a 2D liquid. This example can be reproduced by running <code>particlesmc params.toml</code> in the <code>data/movie/</code> folder. Movie generated with <a href="https://www.ovito.org/"> ovito </a>.
+  MC simulation of a 2D liquid. This example can be reproduced by running <code>particlesmc params.toml</code> in the <code>data/movie/</code> folder. Movie generated with <a href="https://www.ovito.org/"> ovito</a>.
 </p>
 
 ## Features
@@ -36,22 +36,23 @@ ParticlesMC is a Julia package for performing atomic and molecular Monte Carlo s
 - Julia version 1.9 or higher
 
 ### Installing ParticlesMC
-After the 1st release, you will be able to install ParticlesMC using the Julia package manager in one of two ways:
+You can install ParticlesMC using the Julia package manager in one of two ways:
 
 1. Using the package mode (press `]` in the Julia REPL):
 ```julia
-add ParticlesMC
+add https://github.com/TheDisorderedOrganization/ParticlesMC.git
 ```
 
 2. Using the Pkg API:
 ```julia
 using Pkg
-Pkg.add("ParticlesMC")
+Pkg.add("https://github.com/TheDisorderedOrganization/ParticlesMC.git")
 ```
 
 ### Building ParticlesMC
 
-I you want to build `ParticlesMC`, enter the package mode (press `]` in the Julia REPL) and type:
+The build should be automatic when installing `ParticlesMC`. If it hasn't, you can manually build the package, by entering the package mode (press `]` in the Julia REPL) and by typing:
+
 ```julia
 build
 ```
