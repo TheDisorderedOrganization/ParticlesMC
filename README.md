@@ -16,7 +16,7 @@ ParticlesMC is a Julia package for performing atomic and molecular Monte Carlo s
 </p>
 
 <p align="center">
-  <img src="https://github.com/TheDisorderedOrganization/ParticlesMC/blob/main/data/movie/movie.gif" alt="MC simulation of a 2D liquid" width="400">
+  <img src="https://github.com/TheDisorderedOrganization/ParticlesMC/blob/main/examples/movie/movie.gif" alt="MC simulation of a 2D liquid" width="400">
 </p>
 
 <p align="center">
