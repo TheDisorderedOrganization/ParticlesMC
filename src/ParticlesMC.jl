@@ -39,7 +39,7 @@ end
 
 
 export callback_energy
-export nearest_image_distance
+#export nearest_image_distance
 export Model
 export Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer
 export NeighbourList, LinkedList, CellList, EmptyList

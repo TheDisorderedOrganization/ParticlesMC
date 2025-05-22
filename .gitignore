@@ -17,5 +17,4 @@ log_error/
 data/*
 deps/build.log
 
-!data/movie/
 !config_0.xyz

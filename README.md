@@ -6,7 +6,9 @@
 
   [![license](https://img.shields.io/badge/license-GPL%203.0-red.svg)](https://github.com/TheDisorderedOrganization/ParticlesMC/blob/main/LICENSE)
   [![ci](https://github.com/TheDisorderedOrganization/ParticlesMC/actions/workflows/ci.yml/badge.svg)](https://github.com/TheDisorderedOrganization/ParticlesMC/actions/workflows/ci.yml)
+  [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
   [![codecov](https://codecov.io/gh/TheDisorderedOrganization/ParticlesMC/graph/badge.svg?token=URGL1HJOOI)](https://codecov.io/gh/TheDisorderedOrganization/ParticlesMC)
+
 </div>
 
 <p align="center">
@@ -18,7 +20,7 @@ ParticlesMC is a Julia package for performing atomic and molecular Monte Carlo s
 </p>
 
 <p align="center">
-  MC simulation of a 2D liquid. This example can be reproduced by running <code>particlesmc params.toml</code> in the <code>data/movie/</code> folder. Movie generated with <a href="https://www.ovito.org/"> ovito</a>.
+  MC simulation of a 2D liquid. This example can be reproduced by running <code>particlesmc params.toml</code> in the <code>examples/movie/</code> folder. Movie generated with <a href="https://www.ovito.org/"> ovito</a>.
 </p>
 
 ## Features
