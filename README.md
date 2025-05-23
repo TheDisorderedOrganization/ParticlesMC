@@ -64,11 +64,53 @@ This will build the `particlesmc` executable at `~/.julia/bin` (please add this 
 
 ### Running a Monte Carlo Simulation
 
-To run a Monte Carlo simulation, you need to define the systems and moves, and then use the provided functions to execute the simulation. Here is a basic example:
+To run a Monte Carlo simulation, you need an input atomic or molecular configuration file (typically with a `.xyz` extension) and a parameter file (in `TOML` format). The parameter file specifies both the system details (such as temperature, density, and interaction model) and the simulation details (such as simulation type, number of steps, Monte Carlo moves, and outputs). A minimal example is presented below. More detailed explanations can be found in the documentation.
 
-Add example code
-```julia
+**params.toml**
+```toml
+[system]
+config = "config.xyz"
+temperature = 1.0
+density = 1.19206
+list_type = "LinkedList"
+
+[model]
+[model."1-1"]
+name = "LennardJones"
+epsilon = 1.0
+sigma = 1.0
+rcut = 2.5
+
+[simulation]
+type = "Metropolis"
+steps = 500   
+seed = 10
+parallel = false
+output_path = "./"
+
+[[simulation.move]]
+action = "Displacement"
+probability = 1.0
+policy = "SimpleGaussian"
+parameters = {sigma = 0.05}
+
+[[simulation.output]]
+algorithm = "StoreTrajectories"
+scheduler_params = {linear_interval = 50}
+fmt = "XYZ"
 ```
+
+**Explanation of the example:**
+
+This example defines a minimal Monte Carlo simulation setup:
+
+- The `[system]` section specifies the input configuration file (`config.xyz`), the simulation temperature and density, and the use of a linked list for neighbor searching.
+- The `[model]` section defines the interaction potential between particles. Here, a Lennard-Jones potential is used for species pair "1-1" with specified parameters (`epsilon`, `sigma`, and cutoff `rcut`).
+- The `[simulation]` section sets the simulation type to Metropolis, the number of Monte Carlo steps to 500, the random seed, whether to run in parallel, and the output path.
+- The `[[simulation.move]]` section describes the Monte Carlo move to use: a displacement move with probability 1.0, guided by a simple Gaussian policy with a standard deviation (`sigma`) of 0.05.
+- The `[[simulation.output]]` section configures the output: trajectories will be stored every 50 steps in the XYZ format.
+
+By executing `particlesmc params.toml` you will run a basic Metropolis Monte Carlo simulation of particles interacting via the Lennard-Jones potential, using displacement moves, and periodically saving the system's trajectory.
 
 ## Contributing
 
