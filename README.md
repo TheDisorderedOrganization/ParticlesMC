@@ -66,12 +66,21 @@ This will build the `particlesmc` executable at `~/.julia/bin` (please add this 
 
 To run a Monte Carlo simulation, you need an input atomic or molecular configuration file (typically with a `.xyz` extension) and a parameter file (in `TOML` format). The parameter file specifies both the system details (such as temperature, density, and interaction model) and the simulation details (such as simulation type, number of steps, Monte Carlo moves, and outputs). A minimal example is presented below. More detailed explanations can be found in the documentation.
 
+**config.xyz**
+```
+3
+Lattice="1.7321 0.0 0.0 0.0 1.7321 0.0 0.0 0.0 0.0" Properties=type:I:1:pos:R:2
+1 0.1585 0.4965
+1 1.7215 0.7468
+1 0.7606 1.1439
+```
+
 **params.toml**
 ```toml
 [system]
 config = "config.xyz"
 temperature = 1.0
-density = 1.19206
+density = 1.0
 list_type = "LinkedList"
 
 [model]
