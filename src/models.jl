@@ -180,24 +180,32 @@ struct GeneralKG{T<:AbstractFloat} <: DiscreteModel
     name::String
     ϵ::T
     ϵ4::T
+    ϵbond::T
+    ϵ4bond::T
     σ2::T
+    σ2bond::T
     shift::T
+    shiftbond::T
     k::T
     kr02::T
     r02::T
     rcut::T
     rcut2::T
-
+    rcutbond::T
+    rcut2bond::T
 end
 
-function GeneralKG(ϵ, σ, k, r0; rcut=2^(1 / 6) * σ)
+function GeneralKG(ϵ, σ, k, r0; rcut=2^(1 / 6) * σ, ϵbond=ϵ, σbond=σ, rcutbond=rcut)
     name = "GeneralKG"
     r02 = r0 ^ 2
     rcut2 = rcut ^ 2
+    rcut2bond = rcutbond ^2
     kr02 = - k * r02 / 2
     σ2 = σ ^ 2
+    σ2bond = σbond ^ 2
     shift = lennard_jones(rcut2, 4ϵ, σ2)
-    return GeneralKG(name, ϵ, 4ϵ, σ2, shift, k, kr02, r02, rcut, rcut2)
+    shiftbond = lennard_jones(rcut2bond, 4ϵbond, σ2bond)
+    return GeneralKG(name, ϵ, 4ϵ, ϵbond, 4ϵbond, σ2, σ2bond, shift, shiftbond, k, kr02, r02, rcut, rcut2, rcutbond, rcut2bond)
 end
 
 @inline function potential(r2::T, model::GeneralKG) where T<:AbstractFloat
@@ -205,7 +213,12 @@ end
 end
 
 @inline function bond_potential(r2::T, model::GeneralKG) where T<:AbstractFloat
-    return r2 ≤ model.r02 ? fene(r2, model.kr02, model.r02) : Inf
+    u_fene = r2 ≤ model.r02 ? fene(r2, model.kr02, model.r02) : Inf
+    u_lj = 0.0
+    if r2 ≤ cutoff2(model)
+       u_lj += lennard_jones(r2, model.ϵ4bond, model.σ2bond) - model.shiftbond
+    end
+    return u_fene + u_lj
 end
 
 cutoff(model::DiscreteModel) = model.rcut
