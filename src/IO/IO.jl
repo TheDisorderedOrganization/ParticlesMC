@@ -124,15 +124,29 @@ function construct_bonds_array(io, N_bonds, N)
     return bond
 end
 
+filter_kwargs(pairs...) = (; (k => v for (k, v) in pairs if v !== nothing)...)
+
 function get_model(data, i::Int, j::Int)
     key = i <= j ? "$i-$j" : "$j-$i"
     m = data[key]
     if m["name"] == "GeneralKG"
-        return GeneralKG(m["epsilon"], m["sigma"], m["k"], m["r0"]; rcut = m["rcut"])
+        rcut = get(m, "rcut", nothing)
+        
+        return GeneralKG(m["epsilon"], m["sigma"], m["k"], m["r0"];
+                        filter_kwargs(
+                            :rcut => get(m, "rcut", nothing),
+                            :ϵbond => get(m, "epsilonbond", nothing),
+                            :σbond => get(m, "sigmabond", nothing),
+                            :rcutbond => get(m, "rcutbond", nothing),
+                            )...)
     elseif m["name"] == "SmoothLennardJones"
-        return SmoothLennardJones(m["epsilon"], m["sigma"]; rcut = m["rcut"])
+        return SmoothLennardJones(m["epsilon"], m["sigma"];
+                                filter_kwargs(
+                                :rcut => get(m, "rcut", nothing))...)
     elseif m["name"] == "LennardJones"
-        return LennardJones(m["epsilon"], m["sigma"]; rcut = m["rcut"])
+        return LennardJones(m["epsilon"], m["sigma"];
+                                filter_kwargs(
+                                    :rcut => get(m, "rcut", nothing))...)            
     else
         error("Model $(m["name"]) is not implemented")
         return nothing

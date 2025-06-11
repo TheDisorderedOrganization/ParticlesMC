@@ -105,14 +105,9 @@ end
 function compute_energy_ij(system::Molecules, position_i, position_j, model_ij::Model, ::Bonded)
     box = get_box(system)
     r2 = nearest_image_distance_squared(position_i, position_j, box)
-    energy_ij = bond_potential(r2, model_ij)
-    cutoff2_val = cutoff2(model_ij)
-    if r2 ≤ cutoff2_val
-        energy_ij += potential(r2, model_ij)
-    end
-
-    return energy_ij
+    return bond_potential(r2, model_ij)
 end
+
 function compute_energy_ij(system::Molecules, position_i, position_j, model_ij::Model, ::NonBonded)
     r2 = nearest_image_distance_squared(position_i, position_j, get_box(system))
     cutoff2_val = cutoff2(model_ij)
