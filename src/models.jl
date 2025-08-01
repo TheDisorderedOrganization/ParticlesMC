@@ -215,7 +215,7 @@ end
 @inline function bond_potential(r2::T, model::GeneralKG) where T<:AbstractFloat
     u_fene = r2 ≤ model.r02 ? fene(r2, model.kr02, model.r02) : Inf
     u_lj = 0.0
-    if r2 ≤ cutoff2(model)
+    if r2 ≤ model.rcut2bond
        u_lj += lennard_jones(r2, model.ϵ4bond, model.σ2bond) - model.shiftbond
     end
     return u_fene + u_lj
