@@ -10,8 +10,9 @@ rng = Xoshiro(seed)
 N = 8
 M = 100
 d = 2
+temperature = 0.1
 # temperature = 1.0
-temperature = 2.0
+# temperature = 2.0
 density = 0.5
 box = @SVector fill(typeof(temperature)((N / density)^(1 / d)), d)
 position = [[box .* @SVector rand(rng, d) for i in 1:N] for m in 1:M]
@@ -23,14 +24,22 @@ displacement_parameters = ComponentArray(σ=0.065)
 pool = (
     Move(Displacement(0, zero(box)), displacement_policy, displacement_parameters, 1.0),
 )
+
+# # TEST
+# steps = 10^5
+# burn = 10^3
+# block = [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+
+# DATASET
 steps = 10^6
-# burn = 100
-# block = [0, 1, 2, 4, 8, 16, 32, 64, 128]
+# steps = steps ÷ 2 # Half dataset size
+# steps = steps * 2 # Double dataset size
 burn = 10^3
 block = [0, burn]
-callbacks = (callback_energy, callback_acceptance)
 
+callbacks = (callback_energy, callback_acceptance)
 path = "data/test/particles/SSMono2D/dataset/T$temperature/N$N/M$M/steps$steps/seed$seed"
+# path = "data/test/particles/SSMono2D/T$temperature/N$N/M$M/steps$steps/seed$seed"
 sampletimes = build_schedule(steps, burn, block)
 algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=N),
