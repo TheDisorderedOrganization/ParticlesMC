@@ -7,6 +7,7 @@ using ComponentArrays
 using DelimitedFiles
 
 @testset "Running from CLI" begin
+    ParticlesMC.comonicon_install();
     @test success(`bash -c "command -v particlesmc"`)
     @test success(`particlesMC params.toml`)
 end 
