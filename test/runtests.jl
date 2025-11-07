@@ -6,6 +6,12 @@ using Distributions
 using ComponentArrays
 using DelimitedFiles
 
+@testset "Running from CLI" begin
+    @test success(`bash -c "command -v particlesmc"`)
+    @test success(`particlesMC params.toml`)
+end 
+
+
 @testset "Potential energy test" begin
     # Test inital configuration
     chains_el = load_chains("config_0.exyz", args=Dict("temperature" => [0.231], "model" => ["JBB"], "list_type" => "EmptyList"))
@@ -166,3 +172,5 @@ end
     @test isapprox(energy_el, energy_ll, atol=1e-6)
 
 end
+
+
