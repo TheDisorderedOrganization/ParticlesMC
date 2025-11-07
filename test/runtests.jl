@@ -8,6 +8,7 @@ using DelimitedFiles
 
 @testset "Running from CLI" begin
     ENV["PATH"] = "~/.julia/bin:" * ENV["PATH"]
+    ENV["PATH"] = "~/.julia/local:" * ENV["PATH"]
     @test success(`bash -c "command -v particlesmc"`)
     @test success(`particlesMC params.toml`)
 end 
