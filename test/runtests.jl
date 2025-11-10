@@ -5,13 +5,13 @@ using StaticArrays
 using Distributions
 using ComponentArrays
 using DelimitedFiles
+using Pkg
 
 @testset "Running from CLI" begin
+    Pkg.build("ParticlesMC")
     path_sep = Sys.iswindows() ? ";" : ":"
     julia_bin = expanduser("~/.julia/bin")
-    julia_local = expanduser("~/.julia/local")
     ENV["PATH"] = ENV["PATH"] * path_sep * julia_bin
-    ENV["PATH"] = ENV["PATH"] * path_sep * julia_local
     @test success(`bash -c "command -v particlesmc"`)
     @test success(`particlesMC params.toml`)
 end 
