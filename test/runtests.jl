@@ -5,6 +5,17 @@ using StaticArrays
 using Distributions
 using ComponentArrays
 using DelimitedFiles
+using Pkg
+
+@testset "Running from CLI" begin
+    Pkg.build("ParticlesMC")
+    path_sep = Sys.iswindows() ? ";" : ":"
+    julia_bin = expanduser("~/.julia/bin")
+    ENV["PATH"] = ENV["PATH"] * path_sep * julia_bin
+    @test success(`bash -c "command -v particlesmc"`)
+    @test success(`particlesmc params.toml`)
+end 
+
 
 @testset "Potential energy test" begin
     # Test inital configuration
@@ -166,3 +177,5 @@ end
     @test isapprox(energy_el, energy_ll, atol=1e-6)
 
 end
+
+
