@@ -7,11 +7,11 @@ using ComponentArrays
 using DelimitedFiles
 
 @testset "Running from CLI" begin
-    ENV["PATH"] = "~/.julia/bin:" * ENV["PATH"]
-    ENV["PATH"] = "~/.julia/local:" * ENV["PATH"]
-    #For GitHub actions
-    ENV["PATH"] = "/home/runner/.julia/bin:" * ENV["PATH"]
-    ENV["PATH"] = "/home/runner/.julia/local:" * ENV["PATH"]
+    path_sep = Sys.iswindows() ? ";" : ":"
+    julia_bin = expanduser("~/.julia/bin")
+    julia_local = expanduser("~/.julia/local")
+    ENV["PATH"] = ENV["PATH"] * path_sep * julia_bin
+    ENV["PATH"] = ENV["PATH"] * path_sep * julia_local
     @test success(`bash -c "command -v particlesmc"`)
     @test success(`particlesMC params.toml`)
 end 
