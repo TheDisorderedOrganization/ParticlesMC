@@ -13,7 +13,7 @@ using Pkg
     julia_bin = expanduser("~/.julia/bin")
     ENV["PATH"] = ENV["PATH"] * path_sep * julia_bin
     @test success(`bash -c "command -v particlesmc"`)
-    @test success(`particlesMC params.toml`)
+    @test success(`particlesmc params.toml`)
 end 
 
 
