@@ -1,6 +1,10 @@
 
 using ConcreteStructs, Distributions, Statistics, StaticArrays
 
+function Arianna.unnormalised_log_target_density(e, system::Particles)
+    return  - e / system.temperature
+end
+
 function Arianna.delta_log_target_density(e1, e2, system::Particles)
     return -(e2 - e1) ./ system.temperature
 end
