@@ -69,13 +69,14 @@ This collection of moves, together with their associated probabilities, can be r
 ## Choosing the right parameters
 
 ```@raw html
+
 <h1 align="center">
-  <img src="https://raw.githubusercontent.com/TheDisorderedOrganization/ParticlesMC/main/docs/src/assets/goodpolicy.pdf" width="500"/>
+  <img src="https://raw.githubusercontent.com/TheDisorderedOrganization/ParticlesMC/main/docs/src/assets/goodpolicy.png" width="500"/>
 </h1>
+
 
 <p align="center"> Markov chain state space exploration for three different displacement policies. The system is a 1D particle in a potential well $U(x)$, with the target distribution being the Boltzmann distribution. The proposed move is the following: the action is the displacement of the particle and the policy is the distribution of the displacement magnitude and direction. Here, the policy is an uniform law $\sim \mathcal{U}(-u,u)$ with $u>0$. Each dot represents a state in the Markov chain, constructed from bottom to top. The horizontal position of a dot is the position of the particle. <b>Center:</b> When $u$ is too small, all moves are accepted but the state space is explored inefficiently due to small step sizes. <b>Right:</b> When $u$ is too large, nearly all moves are rejected, again leading to poor exploration. <b>Left:</b> An optimal choice of $u$ balances acceptance rate and step size, achieving efficient state space sampling. This illustrates the importance of tuning the proposal distribution.</p>
 ```
-
 A MCMC simulation consists of two phases: a *burn-in* phase and an *equilibrium* phase[^3]. During burn-in, initial samples are discarded because the chain has not yet reached its stationary distribution. Starting from an arbitrary initial state, early samples may overweight 
 low-probability regions of the state space. The burn-in period must be long enough to allow the chain to converge to the target distribution before collecting samples for analysis.
 
