@@ -8,7 +8,6 @@ Manifest.toml
 *.xyz
 *.out
 *.err
-*.pdf
 *.DS_Store
 *.gz
 *.cov
@@ -16,5 +15,6 @@ log_output/
 log_error/
 data/*
 deps/build.log
+docs/build/*
 
 !config_0.xyz

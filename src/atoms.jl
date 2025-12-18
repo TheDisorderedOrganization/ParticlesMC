@@ -1,3 +1,20 @@
+"""
+Atoms - type representing a system of non-bonded particles.
+
+Description
+`Atoms{D,V,C,H,T,SM} <: Particles` stores positions, species, thermodynamic
+properties, and neighbour-list data needed for energy and neighbour queries.
+
+Fields
+- `position::Vector{SVector{D,T}}`: positions of particles.
+- `species::V`: species/type identifier per particle (or per-site values).
+- `density::T`, `temperature::T`, `energy::Vector{T}`: thermodynamic properties.
+- `model_matrix::SM`: interaction models used for pairwise energies.
+- `N::Int`, `d::Int`: number of particles and dimensionality.
+- `box::SVector{D,T}`: periodic box vector.
+- `neighbour_list::C`: neighbour list structure (CellList/LinkedList/EmptyList).
+- `species_list::H`: optional auxiliary species list structure.
+"""
 struct Atoms{D, V<:AbstractVector, C<:NeighbourList, H, T<:AbstractFloat, SM<:AbstractArray} <: Particles
     position::Vector{SVector{D,T}}
     species::V
@@ -13,6 +30,13 @@ struct Atoms{D, V<:AbstractVector, C<:NeighbourList, H, T<:AbstractFloat, SM<:Ab
 end
 
 
+"""
+Create an `Atoms` system, initialize its neighbour list, and compute initial energy.
+
+`System(position, species, density, temperature, model_matrix; list_type=EmptyList)`
+constructs an `Atoms` instance, builds the neighbour list of type `list_type`,
+and computes the initial total energy (stored in `system.energy[1]`).
+"""
 function System(position, species, density::T, temperature::T, model_matrix; list_type=EmptyList) where{T<:AbstractFloat}
     @assert length(position) == length(species)
     N = length(position)
@@ -33,6 +57,12 @@ function System(position, species, density::T, temperature::T, model_matrix; lis
     return system
 end
 
+"""
+Compute the pair energy between particles `i` and `j` for an `Atoms` system.
+
+Returns zero if `i == j` or if the squared distance exceeds the model's cutoff.
+Otherwise returns `potential(r2, model_ij)` where `r2` is the squared nearest-image distance.
+"""
 function compute_energy_ij(system::Atoms, i, j, position_i)
     # Early return using && for short-circuit evaluation
     i == j && return zero(typeof(system.density))
@@ -45,6 +75,12 @@ function compute_energy_ij(system::Atoms, i, j, position_i)
 end
 
 
+"""
+Compute the energy of particle `i` by brute force (no neighbour list).
+
+`compute_energy_particle(system, i, ::EmptyList)` sums interactions of particle `i`
+with all other particles using `compute_energy_ij`.
+"""
 function compute_energy_particle(system::Atoms, i, ::EmptyList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
@@ -55,6 +91,11 @@ function compute_energy_particle(system::Atoms, i, ::EmptyList)
 end
 
 
+"""
+Compute the energy of particle `i` using a `CellList` neighbour list.
+
+This restricts pair evaluations to particles in neighbouring cells of `i`.
+"""
 function compute_energy_particle(system::Atoms, i, neighbour_list::CellList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
@@ -72,6 +113,12 @@ function compute_energy_particle(system::Atoms, i, neighbour_list::CellList)
     return energy_i
 end
 
+"""
+Compute the energy of particle `i` using a `LinkedList` neighbour list.
+
+This variant iterates linked list heads for neighbouring cells and accumulates
+pair energies computed with `compute_energy_ij`.
+"""
 function compute_energy_particle(system::Atoms, i, neighbour_list::LinkedList)
     energy_i = zero(typeof(system.density))
     # Get cell of particle i

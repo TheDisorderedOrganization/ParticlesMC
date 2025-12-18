@@ -1,3 +1,26 @@
+"""
+Molecules - type managing a collection of molecules (chains) of particles.
+
+Description
+`Molecules{D,VS,C,T,SM} <: Particles` represents a particle system organized into
+molecules (or chains). It stores particle positions, molecule membership,
+molecule lengths and start indices, thermodynamic properties, interaction
+models, and the neighbour list structure used for energy and neighbour queries.
+
+Fields
+- `position::Vector{SVector{D,T}}`: positions of particles.
+- `species::VS`: species/type of each particle.
+- `molecule::VS`: molecule identifier for each particle.
+- `molecule_species::VS`: species identifier for each molecule.
+- `start_mol::Vector{Int}`: starting site index of each molecule.
+- `length_mol::Vector{Int}`: length (number of sites) of each molecule.
+- `density::T`, `temperature::T`, `energy::Vector{T}`: thermodynamic properties.
+- `model_matrix::SM`: interaction model matrix.
+- `d::Int`, `N::Int`, `Nmol::Int`: dimension, number of particles, number of molecules.
+- `box::SVector{D,T}`: periodic box vector.
+- `neighbour_list::C`: neighbour list structure (CellList/LinkedList/EmptyList).
+- `bonds::Vector{Vector{Int}}`: lists of bonded neighbours for each particle.
+"""
 struct Molecules{D,  VS<:AbstractVector, C<:NeighbourList, T<:AbstractFloat, SM<:AbstractArray} <: Particles
     position::Vector{SVector{D,T}}
     species::VS
@@ -17,10 +40,39 @@ struct Molecules{D,  VS<:AbstractVector, C<:NeighbourList, T<:AbstractFloat, SM<
     bonds::Vector{Vector{Int}}
 end
 
+"""
+Marker indicating that a pair of particles is bonded.
 
+Used to select the bonded contribution (bond potentials) in energy computations.
+"""
 struct Bonded end
+
+"""
+Marker indicating that a pair of particles is non-bonded.
+
+Used to select the non-bonded pair potential contribution in energy computations.
+"""
 struct NonBonded end
 
+"""
+Create a `Molecules` system and initialize neighbour list and energy.
+
+`System(position, species, molecule, density, temperature, model_matrix, bonds; molecule_species=nothing, list_type=EmptyList)` builds
+and returns a `Molecules` instance. It computes `start_mol`/`length_mol`,
+constructs the neighbour list of type `list_type`, builds it, and computes the
+initial total energy (with a check for Inf/NaN).
+
+Arguments
+- `position`: vector of particle positions.
+- `species`: species identifier per particle.
+- `molecule`: molecule id per particle.
+- `density`, `temperature`: thermodynamic scalars.
+- `model_matrix`: interaction models used to compute energies.
+- `bonds`: bonded neighbour lists for each particle.
+
+Returns
+- `Molecules` instance with neighbour list built and `energy[1]` set.
+"""
 function System(position, species, molecule, density::T, temperature::T, model_matrix, bonds; molecule_species=nothing, list_type=EmptyList) where {T<:AbstractFloat}
     @assert length(position) == length(species)
     N = length(position)
@@ -43,8 +95,20 @@ function System(position, species, molecule, density::T, temperature::T, model_m
     return system
 end
 
+"""
+Return the start and end indices of molecule `i` in `system`.
+
+`get_start_end_mol(system, i)` returns a tuple `(start, end)` for the i-th molecule,
+where `start` is the first particle index and `end` is the last particle index.
+"""
 get_start_end_mol(system::Particles, i::Int) = system.start_mol[i], system.start_mol[i] + system.length_mol[i] - 1
 
+"""
+Return arrays of first indices and counts for consecutive blocks in `vec`.
+
+`get_first_and_counts(vec)` scans `vec` and returns a tuple `(firsts, counts)`, where
+`firsts` are the starting indices of each run and `counts` the corresponding lengths.
+"""
 function get_first_and_counts(vec::Vector{Int})
     firsts = Int[]
     counts = Int[]
@@ -74,6 +138,14 @@ function get_first_and_counts(vec::Vector{Int})
     return firsts, counts
 end
 
+"""
+Check and compute the pair energy between particles `i` and `j`.
+
+`check_compute_energy_ij(system, i, j, position_i, bonds_i)` returns the pair energy
+between `i` and `j`. If `i == j` it returns zero. It determines whether the pair
+is bonded and dispatches to `compute_energy_ij` with the appropriate marker
+(`Bonded` or `NonBonded`).
+"""
 function check_compute_energy_ij(system::Molecules, i, j, position_i, bonds_i)
     # Early return using && for short-circuit evaluation
     i == j && return zero(system.density)
@@ -83,7 +155,11 @@ function check_compute_energy_ij(system::Molecules, i, j, position_i, bonds_i)
     model_ij = get_model(system, i, j)
     return compute_energy_ij(system, position_i, position_j, model_ij, isbonded)
 end
-
+"""
+`check_nonbonded_compute_energy_ij` returns zero if `i == j` or if `j` is bonded to `i`.
+Otherwise it computes the non-bonded pair energy by dispatching to
+`compute_energy_ij(..., NonBonded())`.
+"""
 function check_nonbonded_compute_energy_ij(system::Molecules, i, j, position_i, bonds_i)
     # Early return using && for short-circuit evaluation
     i == j && return zero(system.density)
@@ -108,12 +184,26 @@ function compute_energy_ij(system::Molecules, position_i, position_j, model_ij::
     return bond_potential(r2, model_ij)
 end
 
+"""
+Compute non-bonded pair energy using pair potential with cutoff.
+
+This method is chosen when the pair marker is `NonBonded`. It returns zero if
+the squared distance exceeds the model's cutoff squared, otherwise returns the
+pair potential `potential(r2, model_ij)`.
+"""
 function compute_energy_ij(system::Molecules, position_i, position_j, model_ij::Model, ::NonBonded)
     r2 = nearest_image_distance_squared(position_i, position_j, get_box(system))
     cutoff2_val = cutoff2(model_ij)
     return r2 > cutoff2_val ? zero(typeof(system.density)) : potential(r2, model_ij)
 end
 
+"""
+Compute particle energy by brute force (no neighbour list).
+
+`compute_energy_particle(system, i, ::EmptyList)` sums interactions of particle `i`
+with all particles (including bonded and non-bonded contributions via helper
+functions). Used when no neighbour list is available.
+"""
 function compute_energy_particle(system::Molecules, i, ::EmptyList)
     energy = zero(typeof(system.density))
     position_i = system.position[i]
@@ -125,6 +215,12 @@ function compute_energy_particle(system::Molecules, i, ::EmptyList)
 end
 
 # With linked list
+"""
+Compute particle energy using a `LinkedList` neighbour list.
+
+This variant restricts non-bonded pair evaluation to particles in neighbouring
+cells defined by the linked list; bonded contributions are added explicitly.
+"""
 function compute_energy_particle(system::Molecules, i, neighbour_list::LinkedList)
     energy_i = zero(typeof(system.density))
     # Get cell of particle i
@@ -145,6 +241,12 @@ function compute_energy_particle(system::Molecules, i, neighbour_list::LinkedLis
     return energy_i
 end
 
+"""
+Compute particle energy using a `CellList` neighbour list.
+
+This variant restricts non-bonded pair evaluation to particles in neighbouring
+cells defined by the cell list; bonded contributions are added explicitly.
+"""
 function compute_energy_particle(system::Molecules, i, neighbour_list::CellList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
@@ -163,6 +265,13 @@ function compute_energy_particle(system::Molecules, i, neighbour_list::CellList)
     return energy_i
 end
 
+"""
+Compute a measure of chain correlation for monodisperse chains.
+
+`compute_chain_correlation(system)` assumes all chains have the same length and
+computes the squared sum of pairwise cross-correlations between different chain
+sites over all chains (useful as an order parameter).
+"""
 function compute_chain_correlation(system::Molecules)
     chain_length = system.length_mol[1]
     @assert all(x -> x == chain_length, system.length_mol) "All chains must have the same length"

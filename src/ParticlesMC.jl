@@ -1,3 +1,9 @@
+"""
+ParticlesMC: Monte Carlo simulation framework for particle systems.
+
+Provides core types, utilities, and the `particlesmc` command implemented with Comonicon.
+Exports commonly-used types (e.g., `Particles`, `Model`) and helper functions for simulation control, I/O, and moves.
+"""
 module ParticlesMC
 
 using Arianna, StaticArrays
@@ -15,24 +21,92 @@ include("molecules.jl")
 include("atoms.jl")
 include("moves.jl")
 
+"""Return the position of particle `i` in `system`.
+
+# Arguments
+- `system::Particles`: the particle system
+- `i::Int`: particle index
+
+# Returns
+- Coordinates of particle `i` (e.g., an `SVector` or array).
+"""
 get_position(system::Particles, i::Int) = @inbounds system.position[i]
+
+"""Return the species index (type) of particle `i`.
+
+# Arguments
+- `system::Particles`: the particle system
+- `i::Int`: particle index
+
+# Returns
+- `Int`: species identifier of particle `i`.
+"""
 get_species(system::Particles, i::Int) = @inbounds system.species[i]
+
+"""Return the interaction `Model` between the species of particles `i` and `j`.
+
+# Arguments
+- `system::Particles`: the particle system
+- `i::Int`, `j::Int`: particle indices
+
+# Returns
+- `Model` object or callable describing pair interactions for the two species.
+"""
 get_model(system::Particles, i::Int, j::Int) = @inbounds system.model_matrix[get_species(system, i), get_species(system, j)]
+
+"""Return the simulation box of `system`.
+
+# Returns
+- Box description (usually vector or struct) representing periodic box extents.
+"""
 get_box(system::Particles) = system.box
+
+"""Return the neighbour list of `system`.
+
+# Returns
+- The neighbour list object used for pair evaluations (e.g., `NeighbourList`, `LinkedList`).
+"""
 get_neighbour_list(system::Particles) = system.neighbour_list
+
+"""Return the number of particles in `system`.
+
+Overloads `Base.length` for `Particles`.
+"""
 Base.length(system::Particles) = system.N
+
+"""Return a proper index range for `system`.
+
+Overloads `Base.eachindex` to allow fast indexing.
+"""
 Base.eachindex(system::Particles) = Base.OneTo(length(system))
+
+"""Return the (position, species) tuple for atom `i`.
+
+This overload supports indexing `atoms[i]` to get coordinates and species.
+"""
 Base.getindex(system::Atoms, i::Int) = system.position[i], system.species[i]
 
+"""Iterate over `Atoms` or `Molecules` returning the position and next state.
+
+Conforms to Julia iterator interface; yields the position of the current index.
+"""
 function Base.iterate(system::Union{Atoms, Molecules}, state=1)
     state > length(system) && return nothing  # Stop iteration
     return (system.position[state], state + 1)  # Return element & next state
 end
 
+"""Compute the energy contribution of particle `i` in `system` using its neighbour list.
+
+If a neighbour list is provided it will be used for the evaluation.
+"""
 function compute_energy_particle(system::Particles, i::Int)
     return compute_energy_particle(system, i, system.neighbour_list)
 end
 
+"""Compute the energy contribution for each particle index in `ids`.
+
+Returns an array with per-particle energies by mapping `compute_energy_particle`.
+"""
 function compute_energy_particle(system::Particles, ids::AbstractVector)
     return map(i -> compute_energy_particle(system, i), ids)
 end
@@ -40,7 +114,6 @@ end
 
 export callback_energy
 #export nearest_image_distance
-export Model
 export Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer
 export NeighbourList, LinkedList, CellList, EmptyList
 export Atoms, Molecules
