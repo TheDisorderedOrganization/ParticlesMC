@@ -4,6 +4,7 @@
 
 <div align="center">
 
+  [![docs](https://img.shields.io/badge/docs-online-blue.svg)](https://TheDisorderedOrganization.github.io/ParticlesMC)
   [![license](https://img.shields.io/badge/license-GPL%203.0-red.svg)](https://github.com/TheDisorderedOrganization/ParticlesMC/blob/main/LICENSE)
   [![ci](https://github.com/TheDisorderedOrganization/ParticlesMC/actions/workflows/ci.yml/badge.svg)](https://github.com/TheDisorderedOrganization/ParticlesMC/actions/workflows/ci.yml)
   [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
