@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: julia --project=docs -e '
           using Pkg;
-          Pkg.develop(PackageSpec(url=https://github.com/TheDisorderedOrganization/ParticlesMC.git));
+          Pkg.develop(PackageSpec(url="https://github.com/TheDisorderedOrganization/ParticlesMC.git"));
           Pkg.instantiate()'
 
       - name: Build and deploy
