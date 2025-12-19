@@ -27,7 +27,7 @@ The `TOML` file must provide the following information:
 - The *[[simulation.output]]* section configures the output (trajectories and callbacks).
 
 ## Example: Simulating a Lennard-Jones fluid
-We perform a Monte Carlo simulation of a simple Lennard-Jones fluid using the package's CLI.\@
+We perform a Monte Carlo simulation of a simple Lennard-Jones fluid using the package's CLI.
 As explained above, we need to create a parameter file in TOML format that specifies the simulation settings.
 An example of the parameter file is presented below for simulating a Lennard-Jones fluid at temperature $T=1.0$ and number density $\rho=1.0$.
 
