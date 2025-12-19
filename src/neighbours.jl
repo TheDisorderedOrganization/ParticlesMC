@@ -2,31 +2,60 @@ using StaticArrays
 
 abstract type NeighbourList end
 
+"""Build or update the neighbour list for `system` using its current neighbour list type.
+
+This dispatches to the concrete `build_neighbour_list!` method for the active neighbour list implementation.
+"""
 function build_neighbour_list!(system::Particles)
     return build_neighbour_list!(system, get_neighbour_list(system))
 end
 
+"""A no-op neighbour list implementation: always empty.
+
+Useful for testing or systems where no neighbour list is desired.
+"""
 struct EmptyList <: NeighbourList end
 
+"""Construct an `EmptyList` (ignores box, rcut, N).
+"""
 function EmptyList(box, rcut, N)
     return EmptyList()
 end
 
+"""No-op build for `EmptyList`.
+"""
 function build_neighbour_list!(::Particles,::EmptyList)
     return nothing
 end
 
+"""No-op update for `EmptyList`.
+"""
 function update_neighbour_list!(i, c, c2, ::EmptyList)
     return nothing
 end
 
+"""Return placeholder old and new cell indices for `EmptyList`.
+
+Always returns (1,1) as no cells are tracked.
+"""
 function old_new_cell(::Particles, i, ::EmptyList)
     return 1, 1
 end
 
+"""Return the scalar cell index of particle `i` stored in `neighbour_list`.
+"""
 function get_cell_index(i::Int, neighbour_list::NeighbourList)
     return neighbour_list.cs[i]
 end
+"""Cell-list neighbour list implementation.
+
+Fields:
+- `cs`: per-particle scalar cell index
+- `box`: cell dimensions
+- `ncells`: number of cells per dimension
+- `cells`: vectors of particle indices in each cell
+- `neighbour_cells`: precomputed neighbouring cell indices for each cell
+"""
 struct CellList{T<:AbstractFloat, d} <: NeighbourList
     cs::Vector{Int}
     box::SVector{d,T}
@@ -35,10 +64,16 @@ struct CellList{T<:AbstractFloat, d} <: NeighbourList
     neighbour_cells::Vector{Vector{Int}}  # List of neighbouring cells
 end
 
+"""Return the scalar cell index corresponding to `mc` using `neighbour_list` metadata.
+"""
 function cell_index(neighbour_list::NeighbourList, mc::NTuple{d,Int}) where {d}
     return cell_index(neighbour_list.ncells, mc)
 end
 
+"""Compute a scalar cell index from the multi-dimensional cell coordinate `mc`.
+
+Uses row-major ordering with periodic boundary treatment via `fold_back`.
+"""
 function cell_index(ncells::NTuple{d, Int}, mc::NTuple{d,Int}) where {d}
     mc_fold = fold_back(mc, ncells)
     c = 1
@@ -50,6 +85,10 @@ function cell_index(ncells::NTuple{d, Int}, mc::NTuple{d,Int}) where {d}
     return c
 end
 
+"""Build for each scalar cell index the list of neighbouring cells (including itself).
+
+Returns a vector where element `c` contains a vector of scalar indices of neighbouring cells.
+"""
 function build_neighbour_cells(ncells::NTuple{d,Int}) where {d}
     # Create a list of neighbour cells for each cell
     neighbourcells = Vector{Vector{Int}}(undef, prod(ncells))
@@ -67,6 +106,10 @@ function build_neighbour_cells(ncells::NTuple{d,Int}) where {d}
     return neighbourcells
 end
 
+"""Construct a `CellList` neighbour list given a box, cutoff `rcut`, and particle count `N`.
+
+Cells are chosen so that their dimensions are at least `rcut`, and neighbour cells are precomputed.
+"""
 function CellList(box::SVector{d,T}, rcut::T, N::Int) where {d,T<:AbstractFloat}
     
     # Calculate cell dimensions ensuring they're >= rcut
@@ -84,6 +127,10 @@ function CellList(box::SVector{d,T}, rcut::T, N::Int) where {d,T<:AbstractFloat}
     return CellList(cs, cell_box, ncells, cells, neighbour_cells)
 end
 
+"""Populate `neighbour_list` (a `CellList`) with particle indices from `system`.
+
+Assigns each particle to its corresponding cell and appends it to that cell's list.
+"""
 function build_neighbour_list!(system::Particles, neighbour_list::CellList)
     # Reset cell list
     #foreach(empty!, neighbour_list.cells)
@@ -97,6 +144,10 @@ function build_neighbour_list!(system::Particles, neighbour_list::CellList)
     return nothing
 end
 
+"""Update particle `i` moving from cell `c` to cell `c2` in a `CellList`.
+
+Performs an in-place removal from the old cell and appends to the new one.
+"""
 function update_neighbour_list!(i, c, c2, neighbour_list::CellList)
     # Remove from old cell using in-place filter
     filter!(x -> x != i, neighbour_list.cells[c])
@@ -110,18 +161,30 @@ end
 
 
 
+"""Return the multi-dimensional cell coordinate for position `xi` in `box`.
+
+Result is an `NTuple{d,Int}` giving the cell index in each dimension.
+"""
 function get_cell(xi::SVector{d,T}, box::SVector{d,T}) where {d,T<:AbstractFloat}
     return ntuple(a -> Int(fld(xi[a], box[a])), d)
 end
 
+"""Return the multi-dimensional cell coordinate for position `xi` using `neighbour_list` metadata.
+"""
 function get_cell(xi::SVector{d,T}, neighbour_list::NeighbourList) where {d,T<:AbstractFloat}
     return get_cell(xi, neighbour_list.box)
 end
 
+"""Return the scalar cell index for position `xi` using `neighbour_list`.
+"""
 function get_cell_index(xi::SVector{d,T}, neighbour_list::NeighbourList) where {d,T<:AbstractFloat}
     mc = get_cell(xi, neighbour_list)
     return cell_index(neighbour_list, mc)
 end
+"""Return the old and new cell indices for particle `i` in `neighbour_list` (CellList).
+
+Used to detect whether a particle has moved between cells.
+"""
 function old_new_cell(system::Particles, i, neighbour_list::CellList)
     c = neighbour_list.cs[i]
     # New cell index
@@ -130,6 +193,10 @@ function old_new_cell(system::Particles, i, neighbour_list::CellList)
     return c, c2
 end
 
+"""Linked-list neighbour list implementation.
+
+Uses arrays `head` and `list` to store per-cell linked lists of particle indices.
+"""
 struct LinkedList{T<:AbstractFloat, d} <: NeighbourList
     cs::Vector{Int}
     box::SVector{d,T}
@@ -140,6 +207,8 @@ struct LinkedList{T<:AbstractFloat, d} <: NeighbourList
     neighbour_cells::Vector{Vector{Int}}
 end
 
+"""Construct a `LinkedList` neighbour list given box, cutoff `rcut`, and number of particles `N`.
+"""
 function LinkedList(box, rcut, N)
     cell = box ./ fld.(box, rcut)
     ncells = ntuple(a -> Int(box[a] / cell[a]), length(box))
@@ -151,6 +220,10 @@ function LinkedList(box, rcut, N)
 end
 
 
+"""Populate `neighbour_list` (a `LinkedList`) by constructing head/list linked lists per cell.
+
+Resets headers and inserts particles into per-cell linked lists efficiently.
+"""
 function build_neighbour_list!(system::Particles, neighbour_list::LinkedList)
     # Reset the headers
     for c in 1:prod(neighbour_list.ncells)
@@ -172,8 +245,10 @@ function build_neighbour_list!(system::Particles, neighbour_list::LinkedList)
     return nothing
 end
 
+"""Update particle `i` moving from cell `c` to `c2` in a `LinkedList`.
 
-
+Performs linked-list updates handling header and interior-node cases.
+"""
 function update_neighbour_list!(i::Int, c::Int, c2::Int, neighbour_list::LinkedList)
     # Remove particle from old cell (distinguish head or not)
     if neighbour_list.head[c] == i
@@ -195,6 +270,8 @@ function update_neighbour_list!(i::Int, c::Int, c2::Int, neighbour_list::LinkedL
     return nothing
 end
 
+"""Return old and new cell indices for particle `i` using a `LinkedList` neighbour list.
+"""
 function old_new_cell(system::Particles, i, neighbour_list::LinkedList)
     c = neighbour_list.cs[i]
     # New cell index
