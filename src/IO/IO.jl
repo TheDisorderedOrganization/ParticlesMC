@@ -3,7 +3,7 @@ module IO
 using ..ParticlesMC: Particles, Atoms, Molecules, System
 using ..ParticlesMC: fold_back, volume_sphere
 using ..ParticlesMC: EmptyList, LinkedList, CellList
-using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer
+using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer, LennardJones
 using Arianna
 using Distributions, LinearAlgebra, StaticArrays, Printf
 using DataStructures: OrderedDict
@@ -131,7 +131,7 @@ function get_model(data, i::Int, j::Int)
     m = data[key]
     if m["name"] == "GeneralKG"
         rcut = get(m, "rcut", nothing)
-        
+
         return GeneralKG(m["epsilon"], m["sigma"], m["k"], m["r0"];
                         filter_kwargs(
                             :rcut => get(m, "rcut", nothing),
@@ -146,7 +146,9 @@ function get_model(data, i::Int, j::Int)
     elseif m["name"] == "LennardJones"
         return LennardJones(m["epsilon"], m["sigma"];
                                 filter_kwargs(
-                                    :rcut => get(m, "rcut", nothing))...)            
+                                    :rcut => get(m, "rcut", nothing),
+                                    :shift_potential => get(m, "shift_potential", true),
+                                    )...)
     else
         error("Model $(m["name"]) is not implemented")
         return nothing
@@ -156,7 +158,7 @@ end
 function read_bonds(data, N, format::Arianna.Format)
     selrow = get_selrow(format, N, 1)
     bonds_data = data[N+selrow:end]
-    
+
     if length(bonds_data) == 0
         error("No bonds found in the file")
     else
@@ -306,7 +308,7 @@ function formatted_string(num::Real, digits::Integer)
 end
 
 function write_position(io, position, digits::Int)
-    for position_i in position 
+    for position_i in position
         formatted_position_i = formatted_string(position_i, digits)
         print(io, " ")
         print(io, formatted_position_i)

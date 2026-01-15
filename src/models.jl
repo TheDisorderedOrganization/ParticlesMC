@@ -107,10 +107,14 @@ struct LennardJones{T<:AbstractFloat} <: DiscreteModel
     shift::T
 end
 
-function LennardJones(ϵ, σ; rcut=2.5*σ, name="LennardJones")
+function LennardJones(ϵ, σ; rcut=2.5*σ, name="LennardJones", shift_potential=true)
     σ2 = σ ^ 2
     rcut2 = rcut ^ 2
-    shift = lennard_jones(rcut2, 4ϵ, σ2)
+    if shift_potential
+        shift = lennard_jones(rcut2, 4ϵ, σ2)
+    else
+        shift = 0.0
+    end
     return LennardJones(name, ϵ, 4ϵ, σ, σ2, rcut, rcut2, shift)
 end
 
