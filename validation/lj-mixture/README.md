@@ -22,7 +22,11 @@ The script will run simulations at all desired parameters, save the results to c
 ## Results
 
 ParticleMC reproduces published results very well:
+
+
 ![correlation-plot](correlation-plot.jpeg)
+
+On this plot, `x` is the ratio between the two types of particles, and the energy is per particle.
 
 For some setups, the energies from ParticleMC are a bit higher than published ones. This actually happens at low density, because the simulation times are too short and we don't reach proper convergence (timeseries of energies not shown).
 
