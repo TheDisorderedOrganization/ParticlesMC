@@ -94,14 +94,16 @@ function build_neighbour_cells(ncells::NTuple{d,Int}) where {d}
     neighbourcells = Vector{Vector{Int}}(undef, prod(ncells))
     ranges = map(Base.OneTo, ncells)  # create ranges 1:n1, 1:n2, ...
     for mc in Iterators.product(ranges...)
-        c = cell_index(ncells, mc)    
+        c = cell_index(ncells, mc)
         neighbours = []
         for mc2 in Iterators.product(map(x -> x-1:x+1, mc)...)
             # Calculate the scalar cell index of the neighbour cell (with PBC)
             c2 = cell_index(ncells, mc2)
             push!(neighbours, c2)
         end
-        neighbourcells[c] = neighbours
+        # The unique is required if there are fewer than 3 cells in one direction
+        # Otherwise, the same index can appear multiple times
+        neighbourcells[c] = unique!(neighbours)
     end
     return neighbourcells
 end
@@ -111,16 +113,16 @@ end
 Cells are chosen so that their dimensions are at least `rcut`, and neighbour cells are precomputed.
 """
 function CellList(box::SVector{d,T}, rcut::T, N::Int) where {d,T<:AbstractFloat}
-    
+
     # Calculate cell dimensions ensuring they're >= rcut
     cell_box = @. box / floor(Int, box / rcut)
-    
+
     # Calculate number of cells in each dimension
     ncells = ntuple(i -> max(1, floor(Int, box[i] / cell_box[i])), d)
-    
+
     # Initialize empty cells
     cells = [Int[] for _ in 1:prod(ncells)]
-    
+
     # Initialize cell indices for particles
     cs = zeros(Int, N)
     neighbour_cells = build_neighbour_cells(ncells)
@@ -279,4 +281,3 @@ function old_new_cell(system::Particles, i, neighbour_list::LinkedList)
     c2 = cell_index(neighbour_list, mc2)
     return c, c2
 end
-
