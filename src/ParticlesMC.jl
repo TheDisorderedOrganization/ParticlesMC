@@ -153,8 +153,8 @@ ParticlesMC implemented in Comonicon.
         error("Configuration file '$config' does not exist in the current path.")
     end
     list_type = get(system, "list_type", "LinkedList")  # optional field
-    bonds = get(system, "bonds", nothing)  
-    
+    bonds = get(system, "bonds", nothing)
+
     # Extract simulation parameters
     sim = params["simulation"]
     steps = sim["steps"]
@@ -175,7 +175,7 @@ ParticlesMC implemented in Comonicon.
             "list_type" => list_type,
             "bonds" => bonds,
         ))
-    else    
+    else
         chains = load_chains(config, args=Dict(
             "temperature" => [temperature],
             "density" => [density],
@@ -214,8 +214,27 @@ ParticlesMC implemented in Comonicon.
             else
                 error("Unsupported policy: $policy for action: $action")
             end
+        elseif action == "DiscreteSwap"
+            if "species" in keys(parameters)
+                species = parameters["species"]
+                if length(species) != 2 || eltype(species) != Int
+                    error("'species' for action: $action must be an array of two ints")
+                end
+            else
+                error("Missing parameter 'species' for action: $action")
+            end
+
+            # Use a system to initialize (chains[1])
+            # This is because the action needs the number of particles for each species
+            action_obj = DiscreteSwap(species, chains[1])
+            param_obj = Vector{Float64}()
+            if policy == "DoubleUniform"
+                policy_obj = DoubleUniform()
+            else
+                error("Unsupported policy: $policy for action: $action")
+            end
         else
-            error("Unsupported action: $action") 
+            error("Unsupported action: $action")
         end
         # Build move
         move_obj = Move(action_obj, policy_obj, param_obj, prob)
@@ -257,15 +276,15 @@ ParticlesMC implemented in Comonicon.
         else
             error("Unsupported output algorithm: $alg")
         end
-        push!(algorithm_list, algorithm)    
+        push!(algorithm_list, algorithm)
     end
     M=1
     path = joinpath(output_path)
     simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
-    
+
     # Run the simulation
     run!(simulation)
 
-end 
+end
 
 end
