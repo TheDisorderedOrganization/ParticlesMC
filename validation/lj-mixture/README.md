@@ -1,6 +1,6 @@
 # Binary mixture of LJ particles
 
-This directory contains scripts to run a simple simulation of a binary mixture of Lennard-Jones particles, in 3D. Swap Monte Carlo moves are attempted o
+This directory contains scripts to run a simple simulation of a binary mixture of Lennard-Jones particles, in 3D. Swap Monte Carlo moves are attempted on top of normal displacements.
 
 The average energy is recorded, for different conditions (temperature, density, ratio between the two species), and compared to published results.
 
