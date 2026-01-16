@@ -93,7 +93,7 @@ rcut = 2.5
 
 [simulation]
 type = "Metropolis"
-steps = 500   
+steps = 500
 seed = 10
 parallel = false
 output_path = "./"
@@ -120,7 +120,21 @@ This example defines a minimal Monte Carlo simulation setup:
 - The `[[simulation.move]]` section describes the Monte Carlo move to use: a displacement move with probability 1.0, guided by a simple Gaussian policy with a standard deviation (`sigma`) of 0.05.
 - The `[[simulation.output]]` section configures the output: trajectories will be stored every 50 steps in the XYZ format.
 
-By executing `particlesmc params.toml` you will run a basic Metropolis Monte Carlo simulation of particles interacting via the Lennard-Jones potential, using displacement moves, and periodically saving the system's trajectory.
+By executing `particlesmc params.toml** you will run a basic Metropolis Monte Carlo simulation of particles interacting via the Lennard-Jones potential, using displacement moves, and periodically saving the system's trajectory.
+
+**Extending beyond this simple example:**
+
+More models and moves are available.
+
+For instance, in a simulation that contains multiple species, __DiscreteSwap__ moves can be added to swap species between to random particles:
+```toml
+[[simulation.move]]
+action = "DiscreteSwap"
+probability = 0.1
+policy = "DoubleUniform"
+parameters = {species = [1, 2]}
+```
+is a move that will be attempted 10% of the time (probability = 0.1). It will select a random particle _i_ of species _1_, a random particle _j_ of species _2_, and will attempt to transform _i_ into species _2_, and _j_ into species _1_.
 
 ## Contributing
 
