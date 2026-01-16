@@ -104,9 +104,15 @@ def create_params(parameters: dict, path_to_params: str) -> None:
 
         [[simulation.move]]
         action = "Displacement"
-        probability = 1.0
+        probability = 0.9
         policy = "SimpleGaussian"
         parameters = {{sigma = 0.05}}
+
+        [[simulation.move]]
+        action = "DiscreteSwap"
+        probability = 0.1
+        policy = "DoubleUniform"
+        parameters = {{species = [1, 2]}}
 
         [[simulation.output]]
         algorithm = "StoreCallbacks"
@@ -168,9 +174,11 @@ def run_simulations(output_path: str) -> None:
         # Remove the first half as equilibration, just to be sure
         energies = energies[int(len(energies) / 2) :]
 
-        acceptance_rate = np.array(
-            pd.read_csv(f"{workdir}/acceptance.dat", sep="\\s+", names=["i", "a"])["a"]
-        )[-1]
+        df_acceptance_rates = pd.read_csv(
+            f"{workdir}/acceptance.dat", sep="\\s+", names=["i", "move", "swap"]
+        )
+        displacement_acceptance = float(df_acceptance_rates["move"].iloc[-1][1:-2])
+        swap_acceptance = float(df_acceptance_rates["swap"].iloc[-1][:-1])
 
         # Compute long-range corrections from the cutoff
         # Formula from Gromacs https://manual.gromacs.org/current/reference-manual/functions/long-range-vdw.html
@@ -195,7 +203,8 @@ def run_simulations(output_path: str) -> None:
                 "energy": np.mean(energies),
                 "energy_err": np.std(energies) / np.sqrt(len(energies)),
                 "lr_correction": lr_correction,
-                "acceptance_rate": json.loads(acceptance_rate)[0],
+                "acceptance_rate_displacement": displacement_acceptance,
+                "acceptance_rate_swap": swap_acceptance,
             }
         )
 
