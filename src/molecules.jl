@@ -199,6 +199,9 @@ end
 
 """
 Compute particle energy using a the provided neighbour list.
+
+Non-bonded pair energy evaluations are restricted to particles in the neighbour list;
+bonded contributions are added explicitly.
 """
 function compute_energy_particle(system::Molecules, i, neighbour_list::NeighbourList)
     position_i = system.position[i]
