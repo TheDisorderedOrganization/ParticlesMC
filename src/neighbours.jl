@@ -209,7 +209,7 @@ function get_neighbour_indices(system::Particles, neighbour_list::CellList, i::I
     neighbour_cells = neighbour_list.neighbour_cells[c]
     # Scan the neighbourhood of cell mc (including itself)
     # and from there scan atoms in cell c2
-    (j for c2 in neighbour_cells for j in neighbour_list.cells[c2])
+    (j for c2 in neighbour_cells for j in @inbounds neighbour_list.cells[c2])
 end
 
 """Linked-list neighbour list implementation.
