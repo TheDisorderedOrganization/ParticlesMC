@@ -45,7 +45,7 @@ end
 """Iterate over all system particles.
 """
 function get_neighbour_indices(system::Particles, neighbour_list::EmptyList, ::Int)
-    return (j for j in system)
+    return (j for j in 1:length(system))
 end
 
 """Return the scalar cell index of particle `i` stored in `neighbour_list`.
