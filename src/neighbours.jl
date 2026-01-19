@@ -307,38 +307,37 @@ end
 
 function Base.iterate(neighbour_list::LinkedIterator, state=-1)
 
-    #@inbounds for c2 in neighbour_cells
-    #    j = neighbour_list.head[c2]
+    #@inbounds for c in neighbour_list.neighbour_cells
+    #    j = neighbour_list.head[c]
     #    while (j != -1)
+    #        do stuff
     #        j = neighbour_list.list[j]
     #    end
     #end
 
     # First time in
     if state == -1
-        c, c_state = iterate(neighbour_list.neighbour_cells)
-        j = neighbour_list.head[c]
-        state = (c_state, j)
-        return j, state
-    end
-
-    c_state, j = state
-    if j == -1
-        next = iterate(neighbour_cells, c_state)
+        next = iterate(neighbour_list.neighbour_cells)
         if next == nothing
             return nothing
         end
         c, c_state = next
         j = neighbour_list.head[c]
+    else
+        c_state, j = state
+        j = neighbour_list.list[j]
         if j == -1
-            return nothing
+            next = iterate(neighbour_list.neighbour_cells, c_state)
+            if next == nothing
+                return nothing
+            end
+            c, c_state = next
+            j = neighbour_list.head[c]
         end
-        state = (c_state, j)
-        return j, state
     end
-    j = neighbour_list.list[j]
+
     if j == -1
-            return nothing
+        return nothing
     end
     state = (c_state, j)
     return j, state
