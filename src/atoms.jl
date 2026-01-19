@@ -81,10 +81,10 @@ Compute the energy of particle `i` by brute force (no neighbour list).
 `compute_energy_particle(system, i, ::EmptyList)` sums interactions of particle `i`
 with all other particles using `compute_energy_ij`.
 """
-function compute_energy_particle(system::Atoms, i, ::EmptyList)
+function compute_energy_particle(system::Atoms, i, neighbour_list::EmptyList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
-    for (j, _) in enumerate(system)
+    for j in get_neighbour_indices(system, neighbour_list, i)
         energy_i += compute_energy_ij(system, i, j, position_i)
     end
     return energy_i

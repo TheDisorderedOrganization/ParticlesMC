@@ -42,6 +42,12 @@ function old_new_cell(::Particles, i, ::EmptyList)
     return 1, 1
 end
 
+"""Iterate over all system particles.
+"""
+function get_neighbour_indices(system::Particles, neighbour_list::EmptyList, ::Int)
+    return (j for j in system)
+end
+
 """Return the scalar cell index of particle `i` stored in `neighbour_list`.
 """
 function get_cell_index(i::Int, neighbour_list::NeighbourList)
