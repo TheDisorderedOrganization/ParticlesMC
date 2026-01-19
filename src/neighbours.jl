@@ -298,3 +298,22 @@ function old_new_cell(system::Particles, i, neighbour_list::LinkedList)
     c2 = cell_index(neighbour_list, mc2)
     return c, c2
 end
+
+"""Iterate over the particles from adjacent cells.
+"""
+function get_neighbour_indices(system::Particles, neighbour_list::LinkedList, i::Int)
+    position_i = get_position(system, i)
+    c = get_cell_index(position_i, neighbour_list)
+    neighbour_cells = neighbour_list.neighbour_cells[c]
+
+    neighbours = []
+    @inbounds for c2 in neighbour_cells
+        # Scan atoms in cell c2
+        j = neighbour_list.head[c2]
+        while (j != -1)
+            push!(neighbours, j)
+            j = neighbour_list.list[j]
+        end
+    end
+    return neighbours
+end

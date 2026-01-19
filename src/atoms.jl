@@ -76,56 +76,13 @@ end
 
 
 """
-Compute the energy of particle `i` by brute force (no neighbour list).
-
-`compute_energy_particle(system, i, ::EmptyList)` sums interactions of particle `i`
-with all other particles using `compute_energy_ij`.
+Compute the energy of particle `i` using the provided neighbour list.
 """
-function compute_energy_particle(system::Atoms, i, neighbour_list::EmptyList)
+function compute_energy_particle(system::Atoms, i, neighbour_list::NeighbourList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
     for j in get_neighbour_indices(system, neighbour_list, i)
         energy_i += compute_energy_ij(system, i, j, position_i)
-    end
-    return energy_i
-end
-
-
-"""
-Compute the energy of particle `i` using a `CellList` neighbour list.
-
-This restricts pair evaluations to particles in neighbouring cells of `i`.
-"""
-function compute_energy_particle(system::Atoms, i, neighbour_list::CellList)
-    energy_i = zero(typeof(system.density))
-    position_i = get_position(system, i)
-    for j in get_neighbour_indices(system, neighbour_list, i)
-        energy_i += compute_energy_ij(system, i, j, position_i)
-    end
-    return energy_i
-end
-
-"""
-Compute the energy of particle `i` using a `LinkedList` neighbour list.
-
-This variant iterates linked list heads for neighbouring cells and accumulates
-pair energies computed with `compute_energy_ij`.
-"""
-function compute_energy_particle(system::Atoms, i, neighbour_list::LinkedList)
-    energy_i = zero(typeof(system.density))
-    # Get cell of particle i
-    position_i = get_position(system, i)
-    c = get_cell_index(position_i, neighbour_list)
-    neighbour_cells = neighbour_list.neighbour_cells[c]
-    # Scan the neighbourhood of cell mc (including itself)
-    @inbounds for c2 in neighbour_cells
-        # Scan atoms in cell c2
-        j = neighbour_list.head[c2]
-        while (j != -1)
-            energy_ij = compute_energy_ij(system, i, j, position_i)
-            energy_i += energy_ij
-            j = neighbour_list.list[j]
-        end
     end
     return energy_i
 end
