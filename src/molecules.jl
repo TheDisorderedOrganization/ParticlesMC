@@ -112,15 +112,15 @@ Return arrays of first indices and counts for consecutive blocks in `vec`.
 function get_first_and_counts(vec::Vector{Int})
     firsts = Int[]
     counts = Int[]
-    
+
     # Handle empty vector case
     isempty(vec) && return firsts, counts
-    
+
     # Initialize with first element
     current = vec[1]
     push!(firsts, 1)
     count = 1
-    
+
     # Scan through vector
     @inbounds for i in 2:length(vec)
         if vec[i] != current
@@ -134,7 +134,7 @@ function get_first_and_counts(vec::Vector{Int})
     end
     # Add last count
     push!(counts, count)
-    
+
     return firsts, counts
 end
 
@@ -198,69 +198,15 @@ function compute_energy_ij(system::Molecules, position_i, position_j, model_ij::
 end
 
 """
-Compute particle energy by brute force (no neighbour list).
-
-`compute_energy_particle(system, i, ::EmptyList)` sums interactions of particle `i`
-with all particles (including bonded and non-bonded contributions via helper
-functions). Used when no neighbour list is available.
+Compute particle energy using a the provided neighbour list.
 """
-function compute_energy_particle(system::Molecules, i, ::EmptyList)
-    energy = zero(typeof(system.density))
+function compute_energy_particle(system::Molecules, i, neighbour_list::NeighbourList)
     position_i = system.position[i]
     bonds_i = system.bonds[i]
-    @inbounds for j in eachindex(system)
-        energy += check_compute_energy_ij(system, i, j, position_i, bonds_i)
-    end
-    return energy
-end
 
-# With linked list
-"""
-Compute particle energy using a `LinkedList` neighbour list.
-
-This variant restricts non-bonded pair evaluation to particles in neighbouring
-cells defined by the linked list; bonded contributions are added explicitly.
-"""
-function compute_energy_particle(system::Molecules, i, neighbour_list::LinkedList)
-    energy_i = zero(typeof(system.density))
-    # Get cell of particle i
-    position_i = system.position[i]
-    c = get_cell_index(i, neighbour_list)
-    cells = neighbour_list.neighbour_cells[c]
-    # Scan the neighbourhood of cell mc (including itself)
-    bonds_i = system.bonds[i]
-    energy_i += compute_energy_bonded_i(system, i, position_i, bonds_i)
-    @inbounds for c2 in cells
-        # Calculate the scalar cell index of the neighbour cell (with PBC)
-        j = neighbour_list.head[c2]
-        while (j != -1)
-            energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
-            j = neighbour_list.list[j]
-        end
-    end
-    return energy_i
-end
-
-"""
-Compute particle energy using a `CellList` neighbour list.
-
-This variant restricts non-bonded pair evaluation to particles in neighbouring
-cells defined by the cell list; bonded contributions are added explicitly.
-"""
-function compute_energy_particle(system::Molecules, i, neighbour_list::CellList)
-    energy_i = zero(typeof(system.density))
-    position_i = get_position(system, i)
-    c = get_cell_index(i, neighbour_list)
-    neighbour_cells = neighbour_list.neighbour_cells[c]
-    # Scan the neighbourhood of cell mc (including itself)
-    bonds_i = system.bonds[i]
-    energy_i += compute_energy_bonded_i(system, i, position_i, bonds_i)
-    @inbounds for c2 in neighbour_cells
-        # Scan atoms in cell c2
-        neighbours = neighbour_list.cells[c2]
-        @inbounds for j in neighbours
-            energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
-        end
+    energy_i = compute_energy_bonded_i(system, i, position_i, bonds_i)
+    for j in get_neighbour_indices(system, neighbour_list, i)
+        energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
     end
     return energy_i
 end
