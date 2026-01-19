@@ -99,16 +99,8 @@ This restricts pair evaluations to particles in neighbouring cells of `i`.
 function compute_energy_particle(system::Atoms, i, neighbour_list::CellList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
-    c = get_cell_index(position_i, neighbour_list)
-    neighbour_cells = neighbour_list.neighbour_cells[c]
-
-    # Scan the neighbourhood of cell mc (including itself)
-    @inbounds for c2 in neighbour_cells
-        # Scan atoms in cell c2
-        neighbours = neighbour_list.cells[c2]
-        @inbounds for j in neighbours
-            energy_i += compute_energy_ij(system, i, j, position_i)
-        end
+    for j in get_neighbour_indices(system, neighbour_list, i)
+        energy_i += compute_energy_ij(system, i, j, position_i)
     end
     return energy_i
 end

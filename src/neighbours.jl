@@ -201,6 +201,17 @@ function old_new_cell(system::Particles, i, neighbour_list::CellList)
     return c, c2
 end
 
+"""Iterate over the particles from adjacent cells.
+"""
+function get_neighbour_indices(system::Particles, neighbour_list::CellList, i::Int)
+    position_i = get_position(system, i)
+    c = get_cell_index(position_i, neighbour_list)
+    neighbour_cells = neighbour_list.neighbour_cells[c]
+    # Scan the neighbourhood of cell mc (including itself)
+    # and from there scan atoms in cell c2
+    (j for c2 in neighbour_cells for j in neighbour_list.cells[c2])
+end
+
 """Linked-list neighbour list implementation.
 
 Uses arrays `head` and `list` to store per-cell linked lists of particle indices.
