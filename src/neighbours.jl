@@ -299,6 +299,52 @@ function old_new_cell(system::Particles, i, neighbour_list::LinkedList)
     return c, c2
 end
 
+struct LinkedIterator
+    neighbour_cells::Vector{Int}
+    head::Vector{Int}
+    list::Vector{Int}
+end
+
+function Base.iterate(neighbour_list::LinkedIterator, state=-1)
+
+    #@inbounds for c2 in neighbour_cells
+    #    j = neighbour_list.head[c2]
+    #    while (j != -1)
+    #        j = neighbour_list.list[j]
+    #    end
+    #end
+
+    # First time in
+    if state == -1
+        c, c_state = iterate(neighbour_list.neighbour_cells)
+        j = neighbour_list.head[c]
+        state = (c_state, j)
+        return j, state
+    end
+
+    c_state, j = state
+    if j == -1
+        next = iterate(neighbour_cells, c_state)
+        if next == nothing
+            return nothing
+        end
+        c, c_state = next
+        j = neighbour_list.head[c]
+        if j == -1
+            return nothing
+        end
+        state = (c_state, j)
+        return j, state
+    end
+    j = neighbour_list.list[j]
+    if j == -1
+            return nothing
+    end
+    state = (c_state, j)
+    return j, state
+end
+
+
 """Iterate over the particles from adjacent cells.
 """
 function get_neighbour_indices(system::Particles, neighbour_list::LinkedList, i::Int)
@@ -306,14 +352,7 @@ function get_neighbour_indices(system::Particles, neighbour_list::LinkedList, i:
     c = get_cell_index(position_i, neighbour_list)
     neighbour_cells = neighbour_list.neighbour_cells[c]
 
-    neighbours = []
-    @inbounds for c2 in neighbour_cells
-        # Scan atoms in cell c2
-        j = neighbour_list.head[c2]
-        while (j != -1)
-            push!(neighbours, j)
-            j = neighbour_list.list[j]
-        end
-    end
-    return neighbours
+    iterator = LinkedIterator(neighbour_cells, neighbour_list.head, neighbour_list.list)
+    return (j for j in iterator)
+
 end
