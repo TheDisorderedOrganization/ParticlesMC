@@ -204,9 +204,9 @@ function old_new_cell(system::Particles, i, neighbour_list::CellList)
     return c, c2
 end
 
-"""Calling an EmptyList objects return an object which can be iterated upon.
+"""Calling a CellList objects return an object which can be iterated upon.
 
-This iteration will return the indices of the neighbours (which for this list is all the other particles in the system).
+This iteration will return the indices of the neighbours of particle i.
 """
 function (cell_list::CellList)(system::Particles, i::Int)
     position_i = get_position(system, i)
@@ -352,15 +352,14 @@ function Base.iterate(neighbour_list::LinkedIterator, state=-1)
     return j, state
 end
 
+"""Calling a LinkedList objects return an object which can be iterated upon.
 
-"""Iterate over the particles from adjacent cells.
+This iteration will return the indices of the neighbours of particle i.
 """
-function get_neighbour_indices(system::Particles, neighbour_list::LinkedList, i::Int)
+function (linked_list::LinkedList)(system::Particles, i::Int)
     position_i = get_position(system, i)
-    c = get_cell_index(position_i, neighbour_list)
-    neighbour_cells = neighbour_list.neighbour_cells[c]
+    c = get_cell_index(position_i, linked_list)
+    neighbour_cells = linked_list.neighbour_cells[c]
 
-    iterator = LinkedIterator(neighbour_cells, neighbour_list.head, neighbour_list.list)
-    return (j for j in iterator)
-
+    return LinkedIterator(neighbour_cells, linked_list.head, linked_list.list)
 end
