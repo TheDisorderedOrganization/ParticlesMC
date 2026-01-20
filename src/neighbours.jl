@@ -299,22 +299,25 @@ function old_new_cell(system::Particles, i, neighbour_list::LinkedList)
     return c, c2
 end
 
+""" This struct is used to iterate over neighbours of a Linked list
+"""
 struct LinkedIterator
     neighbour_cells::Vector{Int}
     head::Vector{Int}
     list::Vector{Int}
 end
 
+# To iterate over the neighbours of a linked list, one could write the following loops
+#@inbounds for c in neighbour_list.neighbour_cells
+#    j = neighbour_list.head[c]
+#    while (j != -1)
+#        do stuff
+#        j = neighbour_list.list[j]
+#    end
+#end
+# This is however impossible to rewrite as a simple generator
+# So we implement the following function, which uses a state to carry over the needed information
 function Base.iterate(neighbour_list::LinkedIterator, state=-1)
-
-    #@inbounds for c in neighbour_list.neighbour_cells
-    #    j = neighbour_list.head[c]
-    #    while (j != -1)
-    #        do stuff
-    #        j = neighbour_list.list[j]
-    #    end
-    #end
-
     # First time in
     if state == -1
         next = iterate(neighbour_list.neighbour_cells)
