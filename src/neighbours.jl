@@ -327,14 +327,10 @@ function Base.iterate(neighbour_list::LinkedIterator, state=-1)
     # First time in
     if state == -1
         j = -1
-        c_state = nothing
+        c_state = 1
         # The while loop is necessary, in case the first head is -1
         while j == -1
-            if c_state == nothing
-                next = iterate(neighbour_list.neighbour_cells)
-            else
-                next = iterate(neighbour_list.neighbour_cells, c_state)
-            end
+            next = iterate(neighbour_list.neighbour_cells, c_state)
             if next == nothing
                 return nothing
             end
