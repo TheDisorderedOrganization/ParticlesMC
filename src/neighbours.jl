@@ -214,7 +214,7 @@ function (cell_list::CellList)(system::Particles, i::Int)
     neighbour_cells = cell_list.neighbour_cells[c]
     # Scan the neighbourhood of cell mc (including itself)
     # and from there scan atoms in cell c2
-    return (j for c2 in @inbounds neighbour_cells for j in @inbounds cell_list.cells[c2])
+    return (j for c2 in neighbour_cells for j in @inbounds cell_list.cells[c2])
 end
 
 
@@ -326,16 +326,26 @@ end
 function Base.iterate(neighbour_list::LinkedIterator, state=-1)
     # First time in
     if state == -1
-        next = iterate(neighbour_list.neighbour_cells)
-        if next == nothing
-            return nothing
+        j = -1
+        c_state = nothing
+        # The while loop is necessary, in case the first head is -1
+        while j == -1
+            if c_state == nothing
+                next = iterate(neighbour_list.neighbour_cells)
+            else
+                next = iterate(neighbour_list.neighbour_cells, c_state)
+            end
+            if next == nothing
+                return nothing
+            end
+            c, c_state = next
+            @inbounds j = neighbour_list.head[c]
         end
-        c, c_state = next
-        @inbounds j = neighbour_list.head[c]
     else
         c_state, j = state
         @inbounds j = neighbour_list.list[j]
-        if j == -1
+        # The while loop is necessary, in case a head is -1
+        while j == -1
             next = iterate(neighbour_list.neighbour_cells, c_state)
             if next == nothing
                 return nothing
