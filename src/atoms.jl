@@ -81,7 +81,7 @@ Compute the energy of particle `i` using the provided neighbour list.
 function compute_energy_particle(system::Atoms, i, neighbour_list::NeighbourList)
     energy_i = zero(typeof(system.density))
     position_i = get_position(system, i)
-    for j in get_neighbour_indices(system, neighbour_list, i)
+    for j in neighbour_list(system, i)
         energy_i += compute_energy_ij(system, i, j, position_i)
     end
     return energy_i

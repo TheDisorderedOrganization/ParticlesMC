@@ -42,11 +42,20 @@ function old_new_cell(::Particles, i, ::EmptyList)
     return 1, 1
 end
 
-"""Iterate over all system particles.
+"""Calling an EmptyList objects return an object which can be iterated upon.
+
+This iteration will return the indices of the neighbours (which for this list is all the other particles in the system).
 """
-function get_neighbour_indices(system::Particles, neighbour_list::EmptyList, ::Int)
-    return (j for j in 1:length(system))
+function (self::EmptyList)(system::Particles, ::Int)
+    return EmptyListIterator(length(system))
 end
+
+struct EmptyListIterator
+    n_particles::Int
+end
+
+Base.iterate(self::EmptyListIterator, state = 1) = state > self.n_particles ? nothing : (state, state + 1)
+
 
 """Return the scalar cell index of particle `i` stored in `neighbour_list`.
 """
