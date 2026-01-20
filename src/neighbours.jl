@@ -46,15 +46,9 @@ end
 
 This iteration will return the indices of the neighbours (which for this list is all the other particles in the system).
 """
-function (self::EmptyList)(system::Particles, ::Int)
-    return EmptyListIterator(length(system))
+function (empty_list::EmptyList)(system::Particles, ::Int)
+    return (j for j in 1:length(system))
 end
-
-struct EmptyListIterator
-    n_particles::Int
-end
-
-Base.iterate(self::EmptyListIterator, state = 1) = state > self.n_particles ? nothing : (state, state + 1)
 
 
 """Return the scalar cell index of particle `i` stored in `neighbour_list`.
@@ -210,16 +204,19 @@ function old_new_cell(system::Particles, i, neighbour_list::CellList)
     return c, c2
 end
 
-"""Iterate over the particles from adjacent cells.
+"""Calling an EmptyList objects return an object which can be iterated upon.
+
+This iteration will return the indices of the neighbours (which for this list is all the other particles in the system).
 """
-function get_neighbour_indices(system::Particles, neighbour_list::CellList, i::Int)
+function (cell_list::CellList)(system::Particles, i::Int)
     position_i = get_position(system, i)
-    c = get_cell_index(position_i, neighbour_list)
-    neighbour_cells = neighbour_list.neighbour_cells[c]
+    c = get_cell_index(position_i, cell_list)
+    neighbour_cells = cell_list.neighbour_cells[c]
     # Scan the neighbourhood of cell mc (including itself)
     # and from there scan atoms in cell c2
-    (j for c2 in neighbour_cells for j in @inbounds neighbour_list.cells[c2])
+    return (j for c2 in neighbour_cells for j in @inbounds cell_list.cells[c2])
 end
+
 
 """Linked-list neighbour list implementation.
 
