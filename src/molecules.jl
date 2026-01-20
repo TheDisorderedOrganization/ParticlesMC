@@ -208,7 +208,7 @@ function compute_energy_particle(system::Molecules, i, neighbour_list::Neighbour
     bonds_i = system.bonds[i]
 
     energy_i = compute_energy_bonded_i(system, i, position_i, bonds_i)
-    for j in get_neighbour_indices(system, neighbour_list, i)
+    for j in neighbour_list(system, i)
         energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
     end
     return energy_i
