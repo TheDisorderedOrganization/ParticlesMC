@@ -1,14 +1,14 @@
 # Binary mixture of LJ particles
 
-This directory contains scripts to run a simple simulation of a binary mixture of Lennard-Jones particles, in 3D.
+This directory contains scripts to run a simple simulation of a binary mixture of Lennard-Jones particles, in 3D. Swap Monte Carlo moves are attempted on top of normal displacements.
 
 The average energy is recorded, for different conditions (temperature, density, ratio between the two species), and compared to published results.
 
-Reproducing the published results validates the implementation of the MC scheme, the LJ potential, and interaction counting.
+Reproducing the published results validates the implementation of the MC scheme, the LJ potential, the discrete swap algorithm, and energy evaluation.
 
 ## How to run
 
-The `particlemc` exectuable should be in the PATH env variable, otherwise a specific path can
+The `particlemc` executable should be in the PATH env variable, otherwise a specific path can
 be specified at the top of the run-validation.py script.
 
 The `run-validation.py` script is meant to be run with [uv](https://docs.astral.sh/uv/), with the following command:

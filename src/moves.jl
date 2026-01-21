@@ -146,6 +146,12 @@ mutable struct DiscreteSwap <: Action
     δe::Float64
 end
 
+function DiscreteSwap(species::Vector{Int}, system::Atoms)
+    particles_per_species_1 = count(i -> (i == species[1]), system.species)
+    particles_per_species_2 = count(i -> (i == species[2]), system.species)
+    return DiscreteSwap(1, 1, (species[1], species[2]), (particles_per_species_1, particles_per_species_2), 0.0)
+end
+
 """
 Swap the species identifiers of particles `i` and `j` and return the total
 pre- and post-swap energies for those two particles.
