@@ -70,7 +70,7 @@ policy = "DoubleUniform"
 [[simulation.output]]
 algorithm = "StoreCallbacks"
 callbacks = ["energy", "acceptance"]
-scheduler_params = {linear_interval = 1}
+scheduler_params = {linear_interval = 1000}
 
 [[simulation.output]]
 algorithm = "StoreLastFrames"
@@ -79,4 +79,4 @@ fmt = "XYZ"
 
 [[simulation.output]]
 algorithm = "PrintTimeSteps"
-scheduler_params = {linear_interval = 1}
+scheduler_params = {linear_interval = 1000}
