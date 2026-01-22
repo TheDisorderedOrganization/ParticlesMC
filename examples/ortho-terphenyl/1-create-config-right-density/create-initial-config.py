@@ -10,7 +10,7 @@ import numpy as np
 
 M = 1000
 N = M * 3
-number_density = 1.2  # This is per particle, not per molecule
+number_density = 0.2  # This is per particle, not per molecule
 # rho = N/V
 V = N / number_density
 L = V ** (1 / 3)
@@ -33,9 +33,7 @@ def main(output_file_name: str) -> None:
     f = open(output_file_name, "w")
 
     f.write(f"{N}\n")
-    f.write(
-        f"columns:molecule,species,position cell:{L},{L},{L},rho:{number_density}\n"
-    )
+    f.write(f"columns:molecule,species,position cell:{L},{L},{L}\n")
 
     counter = 1
     for i, j, k in itertools.product(

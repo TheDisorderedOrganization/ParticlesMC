@@ -1,0 +1,82 @@
+[system]
+config = "./inputframe.xyz"
+temperature = 2.0
+density = DENSITY
+list_type = "LinkedList"
+
+[model]
+
+[model."1-1"]
+name = "GeneralKG"
+epsilon = 1.0
+sigma = 0.9
+k = 37.03703703703703
+r0 = 1.35
+
+[model."1-2"]
+name = "GeneralKG"
+epsilon = 1.0
+sigma = 0.95
+k = 33.24099722991689
+r0 = 1.425
+
+[model."1-3"]
+name = "GeneralKG"
+epsilon = 1.0
+sigma = 1.0
+k = 30.0
+r0 = 1.5
+
+[model."2-2"]
+name = "GeneralKG"
+epsilon = 1.0
+sigma = 1.0
+k = 30.0
+r0 = 1.5
+
+[model."2-3"]
+name = "GeneralKG"
+epsilon = 1.0
+sigma = 1.05
+k = 27.2108843537415
+r0 = 1.575
+
+[model."3-3"]
+name = "GeneralKG"
+epsilon = 1.0
+sigma = 1.1
+k = 24.79338842975207
+r0 = 1.65
+
+
+
+[simulation]
+type = "Metropolis"
+steps = 10000
+seed = 10
+parallel = false
+
+[[simulation.move]]
+action = "Displacement"
+probability = 0.8
+policy = "SimpleGaussian"
+parameters = {sigma = 0.05}
+
+[[simulation.move]]
+action = "MoleculeFlip"
+probability = 0.2
+policy = "DoubleUniform"
+
+[[simulation.output]]
+algorithm = "StoreCallbacks"
+callbacks = ["energy", "acceptance"]
+scheduler_params = {linear_interval = 1}
+
+[[simulation.output]]
+algorithm = "StoreLastFrames"
+scheduler_params = {linear_interval = 10000}
+fmt = "XYZ"
+
+[[simulation.output]]
+algorithm = "PrintTimeSteps"
+scheduler_params = {linear_interval = 1}
