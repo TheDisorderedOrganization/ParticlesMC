@@ -78,5 +78,10 @@ scheduler_params = {linear_interval = 10000}
 fmt = "XYZ"
 
 [[simulation.output]]
+algorithm = "StoreTrajectories"
+scheduler_params = {linear_interval = 1000}
+fmt = "XYZ"
+
+[[simulation.output]]
 algorithm = "PrintTimeSteps"
 scheduler_params = {linear_interval = 1000}
