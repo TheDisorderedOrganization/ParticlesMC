@@ -42,6 +42,15 @@ function old_new_cell(::Particles, i, ::EmptyList)
     return 1, 1
 end
 
+"""Calling an EmptyList objects return an object which can be iterated upon.
+
+This iteration will return the indices of the neighbours (which for this list is all the other particles in the system).
+"""
+function (empty_list::EmptyList)(system::Particles, ::Int)
+    return (j for j in 1:length(system))
+end
+
+
 """Return the scalar cell index of particle `i` stored in `neighbour_list`.
 """
 function get_cell_index(i::Int, neighbour_list::NeighbourList)
@@ -195,6 +204,20 @@ function old_new_cell(system::Particles, i, neighbour_list::CellList)
     return c, c2
 end
 
+"""Calling a CellList objects return an object which can be iterated upon.
+
+This iteration will return the indices of the neighbours of particle i.
+"""
+function (cell_list::CellList)(system::Particles, i::Int)
+    position_i = get_position(system, i)
+    c = get_cell_index(position_i, cell_list)
+    neighbour_cells = cell_list.neighbour_cells[c]
+    # Scan the neighbourhood of cell mc (including itself)
+    # and from there scan atoms in cell c2
+    return (j for c2 in neighbour_cells for j in @inbounds cell_list.cells[c2])
+end
+
+
 """Linked-list neighbour list implementation.
 
 Uses arrays `head` and `list` to store per-cell linked lists of particle indices.
@@ -280,4 +303,69 @@ function old_new_cell(system::Particles, i, neighbour_list::LinkedList)
     mc2 = get_cell(get_position(system, i), neighbour_list)
     c2 = cell_index(neighbour_list, mc2)
     return c, c2
+end
+
+""" This struct is used to iterate over neighbours of a Linked list
+"""
+struct LinkedIterator
+    neighbour_cells::Vector{Int}
+    head::Vector{Int}
+    list::Vector{Int}
+end
+
+# To iterate over the neighbours of a linked list, one could write the following loops
+#@inbounds for c in neighbour_list.neighbour_cells
+#    j = neighbour_list.head[c]
+#    while (j != -1)
+#        do stuff
+#        j = neighbour_list.list[j]
+#    end
+#end
+# This is however impossible to rewrite as a simple generator
+# So we implement the following function, which uses a state to carry over the needed information
+function Base.iterate(neighbour_list::LinkedIterator, state=-1)
+    # First time in
+    if state == -1
+        j = -1
+        c_state = 1
+        # The while loop is necessary, in case the first head is -1
+        while j == -1
+            next = iterate(neighbour_list.neighbour_cells, c_state)
+            if next == nothing
+                return nothing
+            end
+            c, c_state = next
+            @inbounds j = neighbour_list.head[c]
+        end
+    else
+        c_state, j = state
+        @inbounds j = neighbour_list.list[j]
+        # The while loop is necessary, in case a head is -1
+        while j == -1
+            next = iterate(neighbour_list.neighbour_cells, c_state)
+            if next == nothing
+                return nothing
+            end
+            c, c_state = next
+            @inbounds j = neighbour_list.head[c]
+        end
+    end
+
+    if j == -1
+        return nothing
+    end
+    state = (c_state, j)
+    return j, state
+end
+
+"""Calling a LinkedList objects return an object which can be iterated upon.
+
+This iteration will return the indices of the neighbours of particle i.
+"""
+function (linked_list::LinkedList)(system::Particles, i::Int)
+    position_i = get_position(system, i)
+    c = get_cell_index(position_i, linked_list)
+    neighbour_cells = linked_list.neighbour_cells[c]
+
+    return LinkedIterator(neighbour_cells, linked_list.head, linked_list.list)
 end
