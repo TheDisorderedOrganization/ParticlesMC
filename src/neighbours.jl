@@ -30,17 +30,10 @@ end
 
 """No-op update for `EmptyList`.
 """
-function update_neighbour_list!(i, c, c2, ::EmptyList)
+function update_neighbour_list!(system::Particles, ::Int, ::EmptyList)
     return nothing
 end
 
-"""Return placeholder old and new cell indices for `EmptyList`.
-
-Always returns (1,1) as no cells are tracked.
-"""
-function old_new_cell(::Particles, i, ::EmptyList)
-    return 1, 1
-end
 
 """Calling an EmptyList objects return an object which can be iterated upon.
 
@@ -169,6 +162,12 @@ function update_neighbour_list!(i, c, c2, neighbour_list::CellList)
     return nothing
 end
 
+function update_neighbour_list!(system::Particles, i::Int, neighbour_list::CellList)
+    c, c2 = old_new_cell(system, i, neighbour_list)
+    if c != c2
+        update_neighbour_list!(i, c, c2, neighbour_list)
+    end
+end
 
 
 
@@ -293,6 +292,13 @@ function update_neighbour_list!(i::Int, c::Int, c2::Int, neighbour_list::LinkedL
     # Update cell index
     neighbour_list.cs[i] = c2
     return nothing
+end
+
+function update_neighbour_list!(system::Particles, i::Int, neighbour_list::LinkedList)
+    c, c2 = old_new_cell(system, i, neighbour_list)
+    if c != c2
+        update_neighbour_list!(i, c, c2, neighbour_list)
+    end
 end
 
 """Return old and new cell indices for particle `i` using a `LinkedList` neighbour list.
