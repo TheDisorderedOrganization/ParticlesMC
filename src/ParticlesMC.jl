@@ -271,7 +271,7 @@ ParticlesMC implemented in Comonicon.
         elseif alg == "PrintTimeSteps"
             algorithm = (
                 algorithm = eval(Meta.parse(alg)),
-                scheduler = build_schedule(steps, burn, steps ÷ 10),
+                scheduler = sched,
             )
         else
             error("Unsupported output algorithm: $alg")
