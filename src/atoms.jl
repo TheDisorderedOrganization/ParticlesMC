@@ -37,14 +37,14 @@ Create an `Atoms` system, initialize its neighbour list, and compute initial ene
 constructs an `Atoms` instance, builds the neighbour list of type `list_type`,
 and computes the initial total energy (stored in `system.energy[1]`).
 """
-function System(position, species, density::T, temperature::T, model_matrix; list_type=EmptyList) where{T<:AbstractFloat}
+function System(position, species, density::T, temperature::T, model_matrix; list_type=EmptyList, list_parameters=nothing) where{T<:AbstractFloat}
     @assert length(position) == length(species)
     N = length(position)
     d = length(Array(position)[1])
     energy = Vector{T}(undef, 1)
     box = @SVector fill(T((N / density)^(1 / d)), d)
     maxcut = maximum([model.rcut for model in model_matrix])
-    neighbour_list = list_type(box, maxcut, N)
+    neighbour_list = list_type(box, maxcut, N; list_parameters=list_parameters)
     species_list = isa(species[1], Integer) ? SpeciesList(species) : nothing
     system = Atoms(position, species, density, energy, temperature, model_matrix, N, d, box, neighbour_list, species_list)
     build_neighbour_list!(system)

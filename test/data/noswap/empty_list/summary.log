@@ -1,0 +1,42 @@
+SIMULATION SUMMARY
+
+Simulation:
+	Steps: 100
+	Number of chains: 1
+	Number of algorithms: 5
+	Verbose: true
+	Started on 2026-01-26T14:05:58.488
+
+System:
+	Number of particles: 3000
+	Dimensions: 3
+	Cell: [13.57208808297453, 13.57208808297453, 13.57208808297453]
+	Density: 1.2000000000000004
+	Temperature: 2.0
+	Neighbour list: EmptyList
+
+Algorithms:
+	Metropolis
+		Calls: 100
+		MC steps per simulation step: 3000
+		Seed: 10
+		Parallel: false
+		Moves:
+			Move 1:
+				Action: Displacement
+				Policy: SimpleGaussian
+				Parameters: [0.05]
+				Weight: 1.0
+	StoreCallbacks
+		Calls: 49
+	StoreTrajectories
+		Calls: 49
+	StoreLastFrames
+		Calls: 1
+	PrintTimeSteps
+		Calls: 10
+
+Report:
+	Simulation time: 39.818533892 s
+	Simulation size: 4.978376388549805 MB
+	Status: Completed on 2026-01-26T14:06:38.526
