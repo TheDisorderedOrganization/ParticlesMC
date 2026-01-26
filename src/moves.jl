@@ -57,11 +57,10 @@ Returns the tuple `(e₁, e₂)` of energies before and after the move.
 function perform_action!(system::Particles, action::Displacement)
     neighbour_list = get_neighbour_list(system)
     e₁ = compute_energy_particle(system, action.i, neighbour_list)
+
     update_position!(system, action)
-    c, c2 = old_new_cell(system, action.i, neighbour_list)
-    if c != c2
-        update_neighbour_list!(action.i, c, c2, neighbour_list)
-    end
+    update_neighbour_list!(system, action.i, neighbour_list)
+
     e₂ = compute_energy_particle(system, action.i, neighbour_list)
     action.δe = e₂ - e₁
     return e₁, e₂
@@ -78,10 +77,7 @@ function Arianna.revert_action!(system::Particles, action::Displacement)
     update_position!(system, action)
     neighbour_list = get_neighbour_list(system)
     system.energy[1] -= action.δe
-    c, c2 = old_new_cell(system, action.i, neighbour_list)
-    if c != c2
-        update_neighbour_list!(action.i, c, c2, neighbour_list)
-    end
+    update_neighbour_list!(system, action.i, neighbour_list)
 end
 
 """
