@@ -445,7 +445,7 @@ function build_neighbour_list!(system::Particles, neighbour_list::VerletList)
         # and from there scan atoms in cell c2
         for c2 in neighbour_cells
             @inbounds for j in neighbour_list.cells[c2]
-                # Don't double count
+                # Don't double count, or self interact
                 if j <= i
                     continue
                 end
@@ -491,7 +491,9 @@ function old_new_cell(system::Particles, i, neighbour_list::VerletList)
     return c, c2
 end
 
+"""Update Verlet neighbour list
 
+The cell and list for any given particle is only update if it has moved a distance > dr/2 since the last update"""
 function update_neighbour_list!(system::Particles, i::Int, neighbour_list::VerletList)
     # Check if particle moved for more than half of dr since last update
     position_i = get_position(system, i)
