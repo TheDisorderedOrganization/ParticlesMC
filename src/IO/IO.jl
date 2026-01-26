@@ -286,6 +286,7 @@ function load_chains(init_path; args=Dict(), verbose=false)
     if haskey(args, "list_type") && !isnothing(args["list_type"])
         list_type = eval(Meta.parse(args["list_type"]))
     end
+    list_parameters = get(args, "list_parameters", nothing)
     verbose && println("Using $list_type as cell list type")
     # Create independent chains
     bool_molecule = :molecule in keys(config_dict[1])
@@ -293,9 +294,9 @@ function load_chains(init_path; args=Dict(), verbose=false)
         initial_molecule_array = broadcast_dict(config_dict, :molecule)
         initial_bond_array = broadcast_dict(config_dict, :bond)
         #initial_btype_array = broadcast_dict(config_dict, :btype)
-        chains = [System(initial_position_array[k], initial_species_array[k], initial_molecule_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, initial_bond_array[k], list_type=list_type) for k in eachindex(initial_position_array)]
+        chains = [System(initial_position_array[k], initial_species_array[k], initial_molecule_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, initial_bond_array[k], list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
     else
-        chains = [System(initial_position_array[k], initial_species_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, list_type=list_type) for k in eachindex(initial_position_array)]
+        chains = [System(initial_position_array[k], initial_species_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
     end
     verbose && println("$(length(chains)) chains created")
     return chains

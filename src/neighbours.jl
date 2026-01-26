@@ -18,7 +18,7 @@ struct EmptyList <: NeighbourList end
 
 """Construct an `EmptyList` (ignores box, rcut, N).
 """
-function EmptyList(box, rcut, N)
+function EmptyList(box, rcut, N; list_parameters=nothing)
     return EmptyList()
 end
 
@@ -114,7 +114,7 @@ end
 
 Cells are chosen so that their dimensions are at least `rcut`, and neighbour cells are precomputed.
 """
-function CellList(box::SVector{d,T}, rcut::T, N::Int) where {d,T<:AbstractFloat}
+function CellList(box::SVector{d,T}, rcut::T, N::Int; list_parameters=nothing) where {d,T<:AbstractFloat}
 
     # Calculate cell dimensions ensuring they're >= rcut
     cell_box = @. box / floor(Int, box / rcut)
@@ -233,7 +233,7 @@ end
 
 """Construct a `LinkedList` neighbour list given box, cutoff `rcut`, and number of particles `N`.
 """
-function LinkedList(box, rcut, N)
+function LinkedList(box, rcut, N; list_parameters=nothing)
     cell = box ./ fld.(box, rcut)
     ncells = ntuple(a -> Int(box[a] / cell[a]), length(box))
     head = -ones(Int, prod(ncells))
@@ -392,17 +392,59 @@ struct VerletList{T<:AbstractFloat, d} <: NeighbourList
     dr::T
     neighbours::Vector{Vector{Int}}
     neighbour_cells::Vector{Vector{Int}}
+    positions_at_last_update::Vector{SVector{d,T}}
 end
 
 """Construct a `VerletList` neighbour list given box, cutoff `rcut`, cutoff padding `dr`, and number of particles `N`.
 """
-function VerletList(box, rcut, dr, N)
-    cell = box ./ fld.(box, rcut + dr)
+function VerletList(box, rcut, N; list_parameters=nothing)
+    cell = box ./ fld.(box, rcut + list_parameters["dr"])
     ncells = ntuple(a -> Int(box[a] / cell[a]), length(box))
     head = -ones(Int, prod(ncells))
     list = zeros(Int, N)
     cs = zeros(Int, N)
     neighbour_cells = build_neighbour_cells(ncells)
     neighbours = Vector{Vector{Int}}(undef, N)
-    return LinkedList(cs, cell, ncells, rcut, dr, neighbour_cells)
+    positions_at_last_update = Vector{SVector{D,T}}(undef, N)
+    return VerletList(cs, cell, ncells, rcut, dr, neighbour_cells, positions_at_last_update)
+end
+
+"""Populate `neighbour_list` (a `VerletList`) by constructing the list of neighbours for each particle.
+
+These neighbours are all particles within a distance `rcut` + `dr`
+"""
+function build_neighbour_list!(system::Particles, neighbour_list::VerletList)
+    # Populate cell list
+    for (i, position_i) in enumerate(system)
+        c = get_cell_index(position_i, neighbour_list)
+        neighbour_list.cs[i] = c
+        push!(neighbour_list.cells[c], i)  # Directly append particle index
+    end
+
+    # Now iterate over all pairs i,j, and see if they are within the cutoff
+    r_cutoff2 = (neighbour_list.rcut + neighbour_list.dr)^2
+    for (i, position_i) in enumerate(system)
+        c = get_cell_index(position_i, neighbour_list)
+        neighbour_cells = neighbour_list.neighbour_cells[c]
+        # Scan the neighbourhood of cell mc (including itself)
+        # and from there scan atoms in cell c2
+        for c2 in neighbour_cells
+            @inbounds for j in neighbour_list.cells[c2]
+                # Don't double count
+                if j < i
+                    continue
+                end
+                position_j = get_position(system, j)
+                r2 = nearest_image_distance_squared(position_i, position_j, get_box(system))
+                if r2 < r_cutoff2
+                    push!(neighbour_list.neighbours[i], j)
+                    push!(neighbour_list.neighbours[j], i)
+                end
+            end
+        end
+    end
+
+    neighbour_list.positions_at_last_update = copy(system.position)
+
+    return nothing
 end
