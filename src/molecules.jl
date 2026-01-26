@@ -83,7 +83,7 @@ function System(position, species, molecule, density::T, temperature::T, model_m
     box = @SVector fill(T((N / density)^(1 / d)), d)
     energy = zeros(T, 1)
     maxcut = maximum([model.rcut for model in model_matrix])
-    neighbour_list = list_type(box, maxcut, N)
+    neighbour_list = list_type(box, maxcut, N; list_parameters=list_parameters)
     system = Molecules(position, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, neighbour_list, bonds)
     build_neighbour_list!(system)
     local_energy = [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
