@@ -375,3 +375,34 @@ function (linked_list::LinkedList)(system::Particles, i::Int)
 
     return LinkedIterator(neighbour_cells, linked_list.head, linked_list.list)
 end
+
+
+# Verlet list
+
+"""Verlet-list neighbour list implementation.
+
+Uses a cell list to find all particles within rcut + dr.
+Keeps an array of neighbour ids for each particle
+"""
+struct VerletList{T<:AbstractFloat, d} <: NeighbourList
+    cs::Vector{Int}
+    box::SVector{d,T}
+    ncells::NTuple{d,Int}
+    rcut::T
+    dr::T
+    neighbours::Vector{Vector{Int}}
+    neighbour_cells::Vector{Vector{Int}}
+end
+
+"""Construct a `VerletList` neighbour list given box, cutoff `rcut`, cutoff padding `dr`, and number of particles `N`.
+"""
+function VerletList(box, rcut, dr, N)
+    cell = box ./ fld.(box, rcut + dr)
+    ncells = ntuple(a -> Int(box[a] / cell[a]), length(box))
+    head = -ones(Int, prod(ncells))
+    list = zeros(Int, N)
+    cs = zeros(Int, N)
+    neighbour_cells = build_neighbour_cells(ncells)
+    neighbours = Vector{Vector{Int}}(undef, N)
+    return LinkedList(cs, cell, ncells, rcut, dr, neighbour_cells)
+end
