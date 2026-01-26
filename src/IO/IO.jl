@@ -2,7 +2,7 @@ module IO
 
 using ..ParticlesMC: Particles, Atoms, Molecules, System
 using ..ParticlesMC: fold_back, volume_sphere
-using ..ParticlesMC: EmptyList, LinkedList, CellList
+using ..ParticlesMC: EmptyList, LinkedList, CellList, VerletList
 using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer, LennardJones
 using Arianna
 using Distributions, LinearAlgebra, StaticArrays, Printf

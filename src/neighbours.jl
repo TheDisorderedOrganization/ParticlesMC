@@ -388,25 +388,31 @@ struct VerletList{T<:AbstractFloat, d} <: NeighbourList
     cs::Vector{Int}
     box::SVector{d,T}
     ncells::NTuple{d,Int}
+    cells::Vector{Vector{Int}}  # List of particles in each cell
     rcut::T
     dr::T
     neighbours::Vector{Vector{Int}}
-    neighbour_cells::Vector{Vector{Int}}
+    neighbour_cells::Vector{Vector{Int}}  # List of neighbouring cells
     positions_at_last_update::Vector{SVector{d,T}}
 end
 
 """Construct a `VerletList` neighbour list given box, cutoff `rcut`, cutoff padding `dr`, and number of particles `N`.
 """
 function VerletList(box, rcut, N; list_parameters=nothing)
-    cell = box ./ fld.(box, rcut + list_parameters["dr"])
+    if list_parameters == nothing || !haskey(list_parameters, "dr")
+        error("Verlet list must have dr as a parameter")
+    end
+    dr = list_parameters["dr"]
+    cell = box ./ fld.(box, rcut + dr)
     ncells = ntuple(a -> Int(box[a] / cell[a]), length(box))
     head = -ones(Int, prod(ncells))
     list = zeros(Int, N)
     cs = zeros(Int, N)
     neighbour_cells = build_neighbour_cells(ncells)
-    neighbours = Vector{Vector{Int}}(undef, N)
-    positions_at_last_update = Vector{SVector{D,T}}(undef, N)
-    return VerletList(cs, cell, ncells, rcut, dr, neighbour_cells, positions_at_last_update)
+    neighbours = [Int[] for _ in 1:N]
+    positions_at_last_update = [zeros(SVector{length(box), typeof(box[1])}) for _ in 1:N]
+    cells = [Int[] for _ in 1:prod(ncells)]
+    return VerletList(cs, cell, ncells, cells, rcut, dr, neighbours, neighbour_cells, positions_at_last_update)
 end
 
 """Populate `neighbour_list` (a `VerletList`) by constructing the list of neighbours for each particle.
@@ -414,7 +420,7 @@ end
 These neighbours are all particles within a distance `rcut` + `dr`
 """
 function build_neighbour_list!(system::Particles, neighbour_list::VerletList)
-    # Populate cell list
+        # Populate cell list
     for (i, position_i) in enumerate(system)
         c = get_cell_index(position_i, neighbour_list)
         neighbour_list.cs[i] = c
@@ -442,9 +448,9 @@ function build_neighbour_list!(system::Particles, neighbour_list::VerletList)
                 end
             end
         end
-    end
 
-    neighbour_list.positions_at_last_update = copy(system.position)
+        neighbour_list.positions_at_last_update[i] = copy(position_i)
+    end
 
     return nothing
 end

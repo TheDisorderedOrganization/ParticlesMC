@@ -153,7 +153,7 @@ ParticlesMC implemented in Comonicon.
         error("Configuration file '$config' does not exist in the current path.")
     end
     list_type = get(system, "list_type", "LinkedList")  # optional field
-    list_parameters = get(system, "list_type", nothing)  # optional field
+    list_parameters = get(system, "list_parameters", nothing)  # optional field
     bonds = get(system, "bonds", nothing)
 
     # Extract simulation parameters
