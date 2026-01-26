@@ -73,7 +73,7 @@ Arguments
 Returns
 - `Molecules` instance with neighbour list built and `energy[1]` set.
 """
-function System(position, species, molecule, density::T, temperature::T, model_matrix, bonds; molecule_species=nothing, list_type=EmptyList) where {T<:AbstractFloat}
+function System(position, species, molecule, density::T, temperature::T, model_matrix, bonds; molecule_species=nothing, list_type=EmptyList, list_parameters=nothing) where {T<:AbstractFloat}
     @assert length(position) == length(species)
     N = length(position)
     Nmol = length(unique(molecule))
