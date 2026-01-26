@@ -429,7 +429,7 @@ end
 These neighbours are all particles within a distance `rcut` + `dr`
 """
 function build_neighbour_list!(system::Particles, neighbour_list::VerletList)
-        # Populate cell list
+    # Populate cell list
     for (i, position_i) in enumerate(system)
         c = get_cell_index(position_i, neighbour_list)
         neighbour_list.cs[i] = c
@@ -446,7 +446,7 @@ function build_neighbour_list!(system::Particles, neighbour_list::VerletList)
         for c2 in neighbour_cells
             @inbounds for j in neighbour_list.cells[c2]
                 # Don't double count
-                if j < i
+                if j <= i
                     continue
                 end
                 position_j = get_position(system, j)
@@ -505,9 +505,8 @@ function update_neighbour_list!(system::Particles, i::Int, neighbour_list::Verle
     # Alternatively, we could redo everything and reset all positions, unclear which one is the fastest
 
     # First, remove i for all other lists
-    for j in neighbour_list.neighbours[i]
-        # no idea what the fastest way to do this is
-        # TODO: benchmark against filter from update_cell_list
+    @inbounds for j in neighbour_list.neighbours[i]
+        # TODO: benchmark against filter
         deleteat!(neighbour_list.neighbours[j], neighbour_list.neighbours[j] .== i)
     end
     neighbour_list.neighbours[i] = Int[]
