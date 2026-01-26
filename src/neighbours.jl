@@ -415,6 +415,14 @@ function VerletList(box, rcut, N; list_parameters=nothing)
     return VerletList(cs, cell, ncells, cells, rcut, dr, neighbours, neighbour_cells, positions_at_last_update)
 end
 
+"""Calling a VerletList objects return an object which can be iterated upon.
+
+This iteration will return the indices of the neighbours of particle i.
+"""
+function (verlet_list::VerletList)(::Particles, i::Int)
+    return (j for j in verlet_list.neighbours[i])
+end
+
 """Populate `neighbour_list` (a `VerletList`) by constructing the list of neighbours for each particle.
 
 These neighbours are all particles within a distance `rcut` + `dr`
@@ -452,5 +460,10 @@ function build_neighbour_list!(system::Particles, neighbour_list::VerletList)
         neighbour_list.positions_at_last_update[i] = copy(position_i)
     end
 
+    return nothing
+end
+
+
+function update_neighbour_list!(system::Particles, i::Int, neighbour_list::VerletList)
     return nothing
 end
