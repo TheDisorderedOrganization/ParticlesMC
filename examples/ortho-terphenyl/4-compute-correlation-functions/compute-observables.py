@@ -3,7 +3,6 @@
 # dependencies = [
 #     "atooms-pp>=4.2.1",
 #     "fastparquet>=2025.12.0",
-#     "matplotlib>=3.10.8",
 #     "pandas>=3.0.0",
 # ]
 # ///
@@ -21,9 +20,15 @@ def compute_fskt() -> pd.DataFrame:
     df_list = []
     for T in temperatures:
         print(f"T = {T}")
-        traj = Trajectory(f"..//3-run-production/{T}/trajectories/1/trajectory.xyz")
+        traj = Trajectory(f"../3-run-production/{T}/trajectories/1/trajectory.xyz")
 
-        cf = pp.SelfIntermediateScatteringFast(traj, nk=1, kmin=7.4, kmax=7.4)
+        cf = pp.SelfIntermediateScatteringFast(
+            traj,
+            ksamples=1,
+            kmin=7.4,
+            kmax=7.4,
+            tgrid=sorted({round(x) for x in np.logspace(0, 6, num=55)}),
+        )
         cf.compute()
 
         print(f"k = {cf.grid[0][0]}")
