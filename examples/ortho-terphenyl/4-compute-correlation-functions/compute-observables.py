@@ -7,10 +7,10 @@
 # ]
 # ///
 
-from atooms.trajectory import Trajectory
 import atooms.postprocessing as pp
 import numpy as np
 import pandas as pd
+from atooms.trajectory import Trajectory
 
 temperatures = [3.0, 2.0, 1.6, 1.4, 1.25, 1.2, 1.15, 1.1, 1.05, 1.0]
 
