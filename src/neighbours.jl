@@ -18,7 +18,7 @@ struct EmptyList <: NeighbourList end
 
 """Construct an `EmptyList` (ignores box, rcut, N).
 """
-function EmptyList(box, rcut, N)
+function EmptyList(box, rcut, N; list_parameters=nothing)
     return EmptyList()
 end
 
@@ -114,7 +114,7 @@ end
 
 Cells are chosen so that their dimensions are at least `rcut`, and neighbour cells are precomputed.
 """
-function CellList(box::SVector{d,T}, rcut::T, N::Int) where {d,T<:AbstractFloat}
+function CellList(box::SVector{d,T}, rcut::T, N::Int; list_parameters=nothing) where {d,T<:AbstractFloat}
 
     # Calculate cell dimensions ensuring they're >= rcut
     cell_box = @. box / floor(Int, box / rcut)
@@ -233,7 +233,7 @@ end
 
 """Construct a `LinkedList` neighbour list given box, cutoff `rcut`, and number of particles `N`.
 """
-function LinkedList(box, rcut, N)
+function LinkedList(box, rcut, N; list_parameters=nothing)
     cell = box ./ fld.(box, rcut)
     ncells = ntuple(a -> Int(box[a] / cell[a]), length(box))
     head = -ones(Int, prod(ncells))
@@ -374,4 +374,170 @@ function (linked_list::LinkedList)(system::Particles, i::Int)
     neighbour_cells = linked_list.neighbour_cells[c]
 
     return LinkedIterator(neighbour_cells, linked_list.head, linked_list.list)
+end
+
+
+# Verlet list
+
+"""Verlet-list neighbour list implementation.
+
+Uses a cell list to find all particles within rcut + dr.
+Keeps an array of neighbour ids for each particle
+"""
+struct VerletList{T<:AbstractFloat, d} <: NeighbourList
+    cs::Vector{Int}
+    box::SVector{d,T}
+    ncells::NTuple{d,Int}
+    cells::Vector{Vector{Int}}  # List of particles in each cell
+    rcut::T
+    dr::T
+    dr2o4::T
+    neighbours::Vector{Vector{Int}}
+    neighbour_cells::Vector{Vector{Int}}  # List of neighbouring cells
+    positions_at_last_update::Vector{SVector{d,T}}
+end
+
+"""Construct a `VerletList` neighbour list given box, cutoff `rcut`, cutoff padding `dr`, and number of particles `N`.
+"""
+function VerletList(box, rcut, N; list_parameters=nothing)
+    if list_parameters == nothing || !haskey(list_parameters, "dr")
+        error("Verlet list must have dr as a parameter")
+    end
+    dr = list_parameters["dr"]
+    cell = box ./ fld.(box, rcut + dr)
+    ncells = ntuple(a -> Int(box[a] / cell[a]), length(box))
+    head = -ones(Int, prod(ncells))
+    list = zeros(Int, N)
+    cs = zeros(Int, N)
+    neighbour_cells = build_neighbour_cells(ncells)
+    neighbours = [Int[] for _ in 1:N]
+    positions_at_last_update = [zeros(SVector{length(box), typeof(box[1])}) for _ in 1:N]
+    cells = [Int[] for _ in 1:prod(ncells)]
+    return VerletList(cs, cell, ncells, cells, rcut, dr, (dr^2)/4, neighbours, neighbour_cells, positions_at_last_update)
+end
+
+"""Calling a VerletList objects return an object which can be iterated upon.
+
+This iteration will return the indices of the neighbours of particle i.
+"""
+function (verlet_list::VerletList)(::Particles, i::Int)
+    return (j for j in verlet_list.neighbours[i])
+end
+
+"""Populate `neighbour_list` (a `VerletList`) by constructing the list of neighbours for each particle.
+
+These neighbours are all particles within a distance `rcut` + `dr`
+"""
+function build_neighbour_list!(system::Particles, neighbour_list::VerletList)
+    # Populate cell list
+    for (i, position_i) in enumerate(system)
+        c = get_cell_index(position_i, neighbour_list)
+        neighbour_list.cs[i] = c
+        push!(neighbour_list.cells[c], i)  # Directly append particle index
+    end
+
+    # Now iterate over all pairs i,j, and see if they are within the cutoff
+    r_cutoff2 = (neighbour_list.rcut + neighbour_list.dr)^2
+    for (i, position_i) in enumerate(system)
+        c = get_cell_index(position_i, neighbour_list)
+        neighbour_cells = neighbour_list.neighbour_cells[c]
+        # Scan the neighbourhood of cell mc (including itself)
+        # and from there scan atoms in cell c2
+        for c2 in neighbour_cells
+            @inbounds for j in neighbour_list.cells[c2]
+                # Don't double count, or self interact
+                if j <= i
+                    continue
+                end
+                position_j = get_position(system, j)
+                r2 = nearest_image_distance_squared(position_i, position_j, get_box(system))
+                if r2 < r_cutoff2
+                    push!(neighbour_list.neighbours[i], j)
+                    push!(neighbour_list.neighbours[j], i)
+                end
+            end
+        end
+
+        neighbour_list.positions_at_last_update[i] = copy(position_i)
+    end
+
+    return nothing
+end
+
+
+"""Update particle `i` moving from cell `c` to cell `c2` in a `VerletList`.
+
+Performs an in-place removal from the old cell and appends to the new one.
+"""
+function update_cell_list!(i, c, c2, neighbour_list::VerletList)
+    # Remove from old cell using in-place filter
+    filter!(x -> x != i, neighbour_list.cells[c])
+    # Add to new cell
+    push!(neighbour_list.cells[c2], i)
+    # Update particle's cell index
+    neighbour_list.cs[i] = c2
+    return nothing
+end
+
+"""Return the old and new cell indices for particle `i` in `neighbour_list` (VerletList).
+
+Used to detect whether a particle has moved between cells.
+"""
+function old_new_cell(system::Particles, i, neighbour_list::VerletList)
+    c = neighbour_list.cs[i]
+    # New cell index
+    mc2 = get_cell(get_position(system, i), neighbour_list)
+    c2 = cell_index(neighbour_list, mc2)
+    return c, c2
+end
+
+"""Update Verlet neighbour list
+
+The cell and list for any given particle is only update if it has moved a distance > dr/2 since the last update"""
+function update_neighbour_list!(system::Particles, i::Int, neighbour_list::VerletList)
+    # Check if particle moved for more than half of dr since last update
+    position_i = get_position(system, i)
+    # WARNING: assumes that positions are never wrapped
+    dx = position_i - neighbour_list.positions_at_last_update[i]
+    if sum(abs2, dx) < neighbour_list.dr2o4
+        return nothing
+    end
+
+    # Need to recompute neighbour list for the particle
+    # Alternatively, we could redo everything and reset all positions, unclear which one is the fastest
+
+    # First, remove i for all other lists
+    @inbounds for j in neighbour_list.neighbours[i]
+        # TODO: benchmark against filter
+        deleteat!(neighbour_list.neighbours[j], neighbour_list.neighbours[j] .== i)
+    end
+    neighbour_list.neighbours[i] = Int[]
+
+    # Update i's cell if needed
+    c, c2 = old_new_cell(system, i, neighbour_list)
+    if c != c2
+        update_cell_list!(i, c, c2, neighbour_list)
+    end
+
+    # Then, recreate list for i
+    r_cutoff2 = (neighbour_list.rcut + neighbour_list.dr)^2
+    c = get_cell_index(position_i, neighbour_list)
+    neighbour_cells = neighbour_list.neighbour_cells[c]
+    for c2 in neighbour_cells
+        @inbounds for j in neighbour_list.cells[c2]
+            if i == j
+                continue
+            end
+            position_j = get_position(system, j)
+            r2 = nearest_image_distance_squared(position_i, position_j, get_box(system))
+            if r2 < r_cutoff2
+                push!(neighbour_list.neighbours[i], j)
+                push!(neighbour_list.neighbours[j], i)
+            end
+        end
+    end
+
+    neighbour_list.positions_at_last_update[i] = copy(position_i)
+
+    return nothing
 end

@@ -115,7 +115,7 @@ end
 export callback_energy
 #export nearest_image_distance
 export Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer
-export NeighbourList, LinkedList, CellList, EmptyList
+export NeighbourList, LinkedList, CellList, EmptyList, VerletList
 export Atoms, Molecules
 export Displacement, DiscreteSwap, MoleculeFlip
 export fold_back, System
@@ -153,6 +153,7 @@ ParticlesMC implemented in Comonicon.
         error("Configuration file '$config' does not exist in the current path.")
     end
     list_type = get(system, "list_type", "LinkedList")  # optional field
+    list_parameters = get(system, "list_parameters", nothing)  # optional field
     bonds = get(system, "bonds", nothing)
 
     # Extract simulation parameters
@@ -173,6 +174,7 @@ ParticlesMC implemented in Comonicon.
             "density" => [density],
             "model" => [model],
             "list_type" => list_type,
+            "list_parameters" => list_parameters,
             "bonds" => bonds,
         ))
     else
@@ -181,6 +183,7 @@ ParticlesMC implemented in Comonicon.
             "density" => [density],
             "model" => [model],
             "list_type" => list_type,
+            "list_parameters" => list_parameters,
         ))
     end
     algorithm_list = []

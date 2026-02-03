@@ -14,15 +14,17 @@ using Pkg
     ENV["PATH"] = ENV["PATH"] * path_sep * julia_bin
     @test success(`bash -c "command -v particlesmc"`)
     @test success(`particlesmc params.toml`)
-end 
+end
 
 
 @testset "Potential energy test" begin
     # Test inital configuration
     chains_el = load_chains("config_0.exyz", args=Dict("temperature" => [0.231], "model" => ["JBB"], "list_type" => "EmptyList"))
     chains_ll = load_chains("config_0.lmp", args=Dict("temperature" => [0.231], "model" => ["JBB"], "list_type" => "LinkedList"))
+    chains_vl = load_chains("config_0.lmp", args=Dict("temperature" => [0.231], "model" => ["JBB"], "list_type" => "VerletList", "list_parameters" => Dict("dr" => 0.2)))
     system_el = chains_el[1]
     system_ll = chains_ll[1]
+    system_vl = chains_vl[1]
     @test system_el.N == system_ll.N
     @test system_el.d == system_ll.d
     @test system_el.temperature == system_ll.temperature
@@ -30,8 +32,10 @@ end
     @test all.(system_el.species == system_ll.species)
     energy_el = system_el.energy[1] / length(system_el)
     energy_ll = system_ll.energy[1] / length(system_ll)
+    energy_vl = system_vl.energy[1] / length(system_vl)
     @test isapprox(energy_el, -2.676832, atol=1e-6)
     @test isapprox(energy_ll, -2.676832, atol=1e-6)
+    @test isapprox(energy_vl, -2.676832, atol=1e-6)
 
     # Test simulation energy
     M = 1
@@ -63,19 +67,28 @@ end
     path_el = "data/noswap/empty_list/"
     simulation = Simulation(chains_el, algorithm_list, steps; path=path_el, verbose=true)
     run!(simulation)
-    
+
     ## Linked List simulation
     chains_ll = [deepcopy(system_ll)]
     path_ll = "data/noswap/linked_list/"
     simulation = Simulation(chains_ll, algorithm_list, steps; path=path_ll, verbose=true)
     run!(simulation)
 
+    ## Verlet List simulation
+    chains_vl = [deepcopy(system_vl)]
+    path_vl = "data/noswap/verlet_list/"
+    simulation = Simulation(chains_vl, algorithm_list, steps; path=path_vl, verbose=true)
+    run!(simulation)
+
     ## Read energy data and compare
     path_energy_el = joinpath(path_el, "energy.dat")
     path_energy_ll = joinpath(path_ll, "energy.dat")
+    path_energy_vl = joinpath(path_vl, "energy.dat")
     energy_el= readdlm(path_energy_el)[:, 2]
     energy_ll = readdlm(path_energy_ll)[:, 2]
+    energy_vl = readdlm(path_energy_vl)[:, 2]
     @test isapprox(energy_el, energy_ll, atol=1e-6)
+    @test isapprox(energy_ll, energy_vl, atol=1e-6)
 
     # SWAPS
     pswap = 0.8
@@ -100,7 +113,7 @@ end
     path_el = "data/swap/empty_list/"
     simulation = Simulation(chains_el, algorithm_list, steps; path=path_el, verbose=true)
     run!(simulation)
-    
+
     ## Linked List simulation
     chains_ll = [deepcopy(system_ll)]
     path_ll = "data/swap/linked_list/"
@@ -162,7 +175,7 @@ end
     path_el = "data/noswap/empty_list/"
     simulation = Simulation(chains_el, algorithm_list, steps; path=path_el, verbose=true)
     run!(simulation)
-    
+
     ## Linked List simulation
     chains_ll = [deepcopy(system_ll)]
     path_ll = "data/noswap/linked_list/"
@@ -177,5 +190,3 @@ end
     @test isapprox(energy_el, energy_ll, atol=1e-6)
 
 end
-
-
