@@ -18,7 +18,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
 Aqua = "0.8"
-Arianna = "0.1"
+Arianna = "0.2"
 Comonicon = "1.0"
 ComponentArrays = "0.15"
 ConcreteStructs = "0.2"
