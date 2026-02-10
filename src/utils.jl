@@ -48,12 +48,12 @@ function SpeciesList(species)
     return SpeciesList(ids, heads)
 end
 
-function callback_energy(simulation)
-    return mean(system.energy[1] / length(system) for system in simulation.chains)
+Arianna.@callback function energy(system)
+    return system.energy[1]
 end
 
-function callback_chain_correlation(simulation)
-    return mean(compute_chain_correlation(system) for system in simulation.chains)
+Arianna.@callback function chain_correlation(system)
+    return compute_chain_correlation(system)
 end
 
 function volume_sphere(r, d::Int)
