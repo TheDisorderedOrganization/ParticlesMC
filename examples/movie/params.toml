@@ -20,7 +20,12 @@ parameters = {sigma = 0.05}
 
 [[simulation.output]]
 algorithm = "StoreCallbacks"
-callbacks = ["energy", "acceptance"]
+callbacks = ["energy"]
+scheduler_params = {linear_interval = 500}
+
+[[simulation.output]]
+algorithm = "StoreAcceptance"
+dependencies = ["Metropolis"]
 scheduler_params = {linear_interval = 500}
 
 [[simulation.output]]

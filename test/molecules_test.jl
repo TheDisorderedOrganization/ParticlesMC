@@ -43,8 +43,8 @@ callbacks = (callback_energy, callback_acceptance)
 path = "data/test/particles/Molecules/T$temperature/N$N/M$M/seed$seed"
 algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=N),
-    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
-    (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
+    (algorithm=StoreCallbacks, callbacks=(energy,), scheduler=sampletimes),
+    (algorithm=StoreAcceptance, dependencies=(Metropolis,), scheduler=sampletimes),    (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
     (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10), fmt=XYZ())
     )

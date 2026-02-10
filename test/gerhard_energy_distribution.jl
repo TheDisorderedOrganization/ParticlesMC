@@ -29,7 +29,6 @@ steps = 1000
 burn = 0
 block = [0, 10]
 sampletimes = build_schedule(steps, burn, block)
-callbacks = (callback_energy, callback_acceptance)
 
 # NO SWAPS
 pswap = 0.0
@@ -41,7 +40,8 @@ pool = (
 
 algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system.N),
-    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreCallbacks, callbacks=(energy,), scheduler=sampletimes),
+    (algorithm=StoreAcceptance, dependencies=(Metropolis,), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=EXYZ()),
     (algorithm=StoreLastFrames, scheduler=[steps], fmt=EXYZ()),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
@@ -72,7 +72,8 @@ pool = (
 )
 algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system.N),
-    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreCallbacks, callbacks=(energy,), scheduler=sampletimes),
+    (algorithm=StoreAcceptance, dependencies=(Metropolis,), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=LAMMPS()),
     (algorithm=StoreLastFrames, scheduler=[steps], fmt=EXYZ()),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
@@ -105,7 +106,8 @@ pool = (
 )
 algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system.N),
-    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreCallbacks, callbacks=(energy,), scheduler=sampletimes),
+    (algorithm=StoreAcceptance, dependencies=(Metropolis,), scheduler=sampletimes),
     (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=LAMMPS()),
     (algorithm=StoreLastFrames, scheduler=[steps], fmt=LAMMPS()),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
