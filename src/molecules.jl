@@ -240,3 +240,7 @@ function compute_chain_correlation(system::Molecules)
     end
     return sum(correlation_array.^2)
 end
+
+Arianna.@callback function chain_correlation(system::Molecules)
+    return compute_chain_correlation(system)
+end

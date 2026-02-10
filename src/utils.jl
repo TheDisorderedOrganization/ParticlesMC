@@ -48,12 +48,8 @@ function SpeciesList(species)
     return SpeciesList(ids, heads)
 end
 
-Arianna.@callback function energy(system)
+Arianna.@callback function energy(system::Particles)
     return system.energy[1]
-end
-
-Arianna.@callback function chain_correlation(system)
-    return compute_chain_correlation(system)
 end
 
 function volume_sphere(r, d::Int)
