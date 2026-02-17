@@ -116,7 +116,12 @@ def create_params(parameters: dict, path_to_params: str) -> None:
 
         [[simulation.output]]
         algorithm = "StoreCallbacks"
-        callbacks = ["energy", "acceptance"]
+        callbacks = ["energy"]
+        scheduler_params = {{linear_interval = 100}}
+
+        [[simulation.output]]
+        algorithm = "StoreAcceptance"
+        dependencies = ["Metropolis"]
         scheduler_params = {{linear_interval = 100}}
 
         [[simulation.output]]
@@ -128,12 +133,12 @@ def create_params(parameters: dict, path_to_params: str) -> None:
 
 
 def run_simulations(output_path: str) -> None:
-    df = pd.read_csv("reference-data.csv")
+    df_ref = pd.read_csv("reference-data.csv")
 
     path_to_config = "config.exyz"
     path_to_params = "params.toml"
     data = []
-    for i, row in df.iterrows():
+    for i, row in df_ref.iterrows():
         workdir = f"./tmp/{i}"
         os.makedirs(workdir, exist_ok=True)
 
@@ -168,17 +173,31 @@ def run_simulations(output_path: str) -> None:
         )
 
         # Post-process the energies
-        energies = pd.read_csv(f"{workdir}/energy.dat", sep="\\s+", names=["i", "e"])[
+        energies = pd.read_csv(f"{workdir}/chains/1/energy.dat", sep="\\s+", names=["i", "e"])[
             "e"
         ]
         # Remove the first half as equilibration, just to be sure
         energies = energies[int(len(energies) / 2) :]
+        
+        moves = {
+            1: "displacement",
+            2: "swap",
+        }
 
-        df_acceptance_rates = pd.read_csv(
-            f"{workdir}/acceptance.dat", sep="\\s+", names=["i", "move", "swap"]
-        )
-        displacement_acceptance = float(df_acceptance_rates["move"].iloc[-1][1:-2])
-        swap_acceptance = float(df_acceptance_rates["swap"].iloc[-1][:-1])
+        dfs = []
+
+        for move_id, move_name in moves.items():
+            path = f"{workdir}/moves/{move_id}/acceptance.dat"
+            df = pd.read_csv(path, sep=r"\s+", names=["i", move_name])
+            dfs.append(df)
+
+        # Merge all on column "i"
+        df_acceptance_rates = dfs[0]
+        for df in dfs[1:]:
+            df_acceptance_rates = df_acceptance_rates.merge(df, on="i")
+
+        displacement_acceptance = float(df_acceptance_rates["displacement"].iloc[-1])
+        swap_acceptance = float(df_acceptance_rates["swap"].iloc[-1])
 
         # Compute long-range corrections from the cutoff
         # Formula from Gromacs https://manual.gromacs.org/current/reference-manual/functions/long-range-vdw.html
@@ -207,8 +226,7 @@ def run_simulations(output_path: str) -> None:
                 "acceptance_rate_swap": swap_acceptance,
             }
         )
-
-        df.merge(pd.DataFrame(data)).to_csv(output_path)
+        df_ref.merge(pd.DataFrame(data)).to_csv(output_path)
 
 
 def plot_results(path_to_energies: str) -> None:

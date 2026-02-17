@@ -20,7 +20,7 @@ def compute_fskt() -> pd.DataFrame:
     df_list = []
     for T in temperatures:
         print(f"T = {T}")
-        traj = Trajectory(f"../3-run-production/{T}/trajectories/1/trajectory.xyz")
+        traj = Trajectory(f"../3-run-production/{T}/chains/1/trajectory.xyz")
 
         cf = pp.SelfIntermediateScatteringFast(
             traj,

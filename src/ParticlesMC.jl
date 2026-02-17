@@ -112,7 +112,7 @@ function compute_energy_particle(system::Particles, ids::AbstractVector)
 end
 
 
-export callback_energy
+export energy
 #export nearest_image_distance
 export Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer
 export NeighbourList, LinkedList, CellList, EmptyList, VerletList
@@ -249,6 +249,7 @@ ParticlesMC implemented in Comonicon.
     for output in sim["output"]
         alg = output["algorithm"]
         scheduler_params = output["scheduler_params"]
+        dependencies = get(output, "dependencies", nothing)
         callbacks = get(output, "callbacks", [])
         fmt = get(output, "fmt", "XYZ")
         interval = scheduler_params["linear_interval"]
@@ -259,10 +260,17 @@ ParticlesMC implemented in Comonicon.
             sched = build_schedule(steps, burn, interval)
         end
         if alg == "StoreCallbacks"
-            callbacks = map(c -> eval(Meta.parse("callback_$c")), callbacks)
+            callbacks = map(c -> eval(Meta.parse("$c")), callbacks)
             algorithm = (
                 algorithm = eval(Meta.parse(alg)),
                 callbacks = callbacks,
+                scheduler = sched,
+            )
+        elseif alg == "StoreAcceptance"
+            dependencies = map(d -> eval(Meta.parse("$d")), dependencies)
+            algorithm = (
+                algorithm = eval(Meta.parse(alg)),
+                dependencies = dependencies,
                 scheduler = sched,
             )
         elseif alg == "StoreTrajectories" || alg == "StoreLastFrames"

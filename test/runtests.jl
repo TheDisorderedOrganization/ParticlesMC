@@ -46,7 +46,6 @@ end
     burn = 0
     block = [0, 1, 2, 4, 8]
     sampletimes = build_schedule(steps, burn, block)
-    callbacks = (callback_energy, callback_acceptance)
 
     # NO SWAPS
     pswap = 0.0
@@ -57,7 +56,8 @@ end
     )
     algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
-    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreCallbacks, callbacks=(energy,), scheduler=sampletimes),
+    (algorithm=StoreAcceptance, dependencies=(Metropolis,), scheduler=sampletimes), 
     (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=EXYZ()),
     (algorithm=StoreLastFrames, scheduler=[steps], fmt=LAMMPS()),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
@@ -81,9 +81,9 @@ end
     run!(simulation)
 
     ## Read energy data and compare
-    path_energy_el = joinpath(path_el, "energy.dat")
-    path_energy_ll = joinpath(path_ll, "energy.dat")
-    path_energy_vl = joinpath(path_vl, "energy.dat")
+    path_energy_el = joinpath(path_el, "chains/1/energy.dat")
+    path_energy_ll = joinpath(path_ll, "chains/1/energy.dat")
+    path_energy_vl = joinpath(path_vl, "chains/1/energy.dat")
     energy_el= readdlm(path_energy_el)[:, 2]
     energy_ll = readdlm(path_energy_ll)[:, 2]
     energy_vl = readdlm(path_energy_vl)[:, 2]
@@ -103,7 +103,8 @@ end
     )
     algorithm_list = (
         (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
-        (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes, fmt=XYZ()),
+        (algorithm=StoreCallbacks, callbacks=(energy,), scheduler=sampletimes),
+        (algorithm=StoreAcceptance, dependencies=(Metropolis,), scheduler=sampletimes),
         (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=XYZ()),
         (algorithm=StoreLastFrames, scheduler=[steps], fmt=XYZ()),
         (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10), fmt=XYZ()),
@@ -121,8 +122,8 @@ end
     run!(simulation)
 
     ## Read energy data and compare
-    path_energy_el = joinpath(path_el, "energy.dat")
-    path_energy_ll = joinpath(path_ll, "energy.dat")
+    path_energy_el = joinpath(path_el, "chains/1/energy.dat")
+    path_energy_ll = joinpath(path_ll, "chains/1/energy.dat")
     energy_el= readdlm(path_energy_el)[:, 2]
     energy_ll = readdlm(path_energy_ll)[:, 2]
     @test isapprox(energy_el, energy_ll, atol=1e-6)
@@ -154,7 +155,6 @@ end
     burn = 0
     block = [0, 1, 2, 4, 8]
     sampletimes = build_schedule(steps, burn, block)
-    callbacks = (callback_energy, callback_acceptance)
 
     # NO SWAPS
     pswap = 0.0
@@ -165,7 +165,8 @@ end
     )
     algorithm_list = (
     (algorithm=Metropolis, pool=pool, seed=seed, parallel=false, sweepstep=system_el.N),
-    (algorithm=StoreCallbacks, callbacks=(callback_energy, callback_acceptance), scheduler=sampletimes),
+    (algorithm=StoreCallbacks, callbacks=(energy,), scheduler=sampletimes),
+    (algorithm=StoreAcceptance, dependencies=(Metropolis,), scheduler=sampletimes),        
     (algorithm=StoreTrajectories, scheduler=sampletimes, fmt=EXYZ()),
     (algorithm=StoreLastFrames, scheduler=[steps], fmt=EXYZ()),
     (algorithm=PrintTimeSteps, scheduler=build_schedule(steps, burn, steps ÷ 10)),
@@ -183,8 +184,8 @@ end
     run!(simulation)
 
     ## Read energy data and compare
-    path_energy_el = joinpath(path_el, "energy.dat")
-    path_energy_ll = joinpath(path_ll, "energy.dat")
+    path_energy_el = joinpath(path_el, "chains/1/energy.dat")
+    path_energy_ll = joinpath(path_ll, "chains/1/energy.dat")
     energy_el= readdlm(path_energy_el)[:, 2]
     energy_ll = readdlm(path_energy_ll)[:, 2]
     @test isapprox(energy_el, energy_ll, atol=1e-6)

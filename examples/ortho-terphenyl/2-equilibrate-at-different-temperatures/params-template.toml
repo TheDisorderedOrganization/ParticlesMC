@@ -69,7 +69,12 @@ policy = "DoubleUniform"
 
 [[simulation.output]]
 algorithm = "StoreCallbacks"
-callbacks = ["energy", "acceptance"]
+callbacks = ["energy"]
+scheduler_params = {linear_interval = 1000}
+
+[[simulation.output]]
+algorithm = "StoreAcceptance"
+dependencies = ["Metropolis"]
 scheduler_params = {linear_interval = 1000}
 
 [[simulation.output]]
