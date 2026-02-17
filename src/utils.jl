@@ -49,7 +49,7 @@ function SpeciesList(species)
 end
 
 Arianna.@callback function energy(system::Particles)
-    return system.energy[1]
+    return system.energy[1] / length(system)
 end
 
 function volume_sphere(r, d::Int)
