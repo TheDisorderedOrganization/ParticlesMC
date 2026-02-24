@@ -49,11 +49,11 @@ A struct representing a soft-sphere interaction model where particles interact v
 - `rcut::T`: Cutoff distance matrix beyond which interactions are neglected.
 - `shift::T`: Shift matrix to ensure the potential is zero at the cutoff distance.
 """
-struct SoftSpheres{T<:AbstractArray, N<:Number} <: DiscreteModel
+struct SoftSpheres{T<:AbstractFloat,N<:Number} <: DiscreteModel
     name::String
     ϵ::T
     σ::T
-    σ2::T
+    σ2::
     n::Int
     ndiv2::N
     rcut::T
@@ -61,9 +61,9 @@ struct SoftSpheres{T<:AbstractArray, N<:Number} <: DiscreteModel
     shift::T
 end
 
-function SoftSpheres(ϵ, σ, n; rcut=2.5*σ, name="SoftSpheres")
-    σ2 = σ ^ 2
-    rcut2 = rcut ^ 2
+function SoftSpheres(ϵ, σ, n; rcut=2.5 * σ, name="SoftSpheres")
+    σ2 = σ^2
+    rcut2 = rcut^2
     ndiv2 = isodd(n) ? n / 2 : n ÷ 2
     shift = inverse_power(rcut2, ϵ, σ2, ndiv2)
     return SoftSpheres(name, ϵ, σ, σ2, n, ndiv2, rcut, rcut2, shift)
@@ -76,10 +76,10 @@ end
 function BHHP()
     ϵ = [1.0 1.0; 1.0 1.0]
     σ = [1.0 1.2; 1.2 1.4]
-    LJ_11 = SoftSpheres(ϵ[1,1], σ[1,1], 12)
-    LJ_12 = SoftSpheres(ϵ[1,2], σ[1,2], 12)
-    LJ_21 = SoftSpheres(ϵ[2,1], σ[2,1], 12)
-    LJ_22 = SoftSpheres(ϵ[2,2], σ[2,2], 12)
+    LJ_11 = SoftSpheres(ϵ[1, 1], σ[1, 1], 12)
+    LJ_12 = SoftSpheres(ϵ[1, 2], σ[1, 2], 12)
+    LJ_21 = SoftSpheres(ϵ[2, 1], σ[2, 1], 12)
+    LJ_22 = SoftSpheres(ϵ[2, 2], σ[2, 2], 12)
     return [LJ_11 LJ_12; LJ_21 LJ_22]
 end
 
@@ -107,9 +107,9 @@ struct LennardJones{T<:AbstractFloat} <: DiscreteModel
     shift::T
 end
 
-function LennardJones(ϵ, σ; rcut=2.5*σ, name="LennardJones", shift_potential=true)
-    σ2 = σ ^ 2
-    rcut2 = rcut ^ 2
+function LennardJones(ϵ, σ; rcut=2.5 * σ, name="LennardJones", shift_potential=true)
+    σ2 = σ^2
+    rcut2 = rcut^2
     if shift_potential
         shift = lennard_jones(rcut2, 4ϵ, σ2)
     else
@@ -125,10 +125,10 @@ end
 function KobAndersen()
     ϵ = [1.0 1.5; 1.5 0.5]
     σ = [1.0 0.8; 0.8 0.88]
-    LJ_11 = LennardJones(ϵ[1,1], σ[1,1])
-    LJ_12 = LennardJones(ϵ[1,2], σ[1,2])
-    LJ_21 = LennardJones(ϵ[2,1], σ[2,1])
-    LJ_22 = LennardJones(ϵ[2,2], σ[2,2])
+    LJ_11 = LennardJones(ϵ[1, 1], σ[1, 1])
+    LJ_12 = LennardJones(ϵ[1, 2], σ[1, 2])
+    LJ_21 = LennardJones(ϵ[2, 1], σ[2, 1])
+    LJ_22 = LennardJones(ϵ[2, 2], σ[2, 2])
     return [LJ_11 LJ_12; LJ_21 LJ_22]
 end
 
@@ -147,18 +147,18 @@ struct SmoothLennardJones{T<:AbstractFloat} <: DiscreteModel
     rcut2::T
 end
 
-function SmoothLennardJones(ϵ::T, σ::T; rcut::T=2.5*σ, name = "SmoothLennardJones") where T <: AbstractFloat
+function SmoothLennardJones(ϵ::T, σ::T; rcut::T=2.5 * σ, name="SmoothLennardJones") where T<:AbstractFloat
     C0 = T(0.04049023795)
     C2 = T(-0.00970155098)
     C4 = T(0.00062012616)
-    σ2= σ ^ 2
+    σ2 = σ^2
     C2_σ2 = C2 / σ2
-    C4_σ4 = C4 / σ2 ^ 2
-    rcut2= rcut^2
+    C4_σ4 = C4 / σ2^2
+    rcut2 = rcut^2
     return SmoothLennardJones(name, ϵ, σ, 4ϵ, σ2, C0, C2_σ2, C4_σ4, rcut, rcut2)
 end
 
-function potential(r2::T, model::SmoothLennardJones) where T <: AbstractFloat
+function potential(r2::T, model::SmoothLennardJones) where T<:AbstractFloat
     ϵ4 = model.ϵ4
     lj = lennard_jones(r2, ϵ4, model.σ2)
     shift = ϵ4 * (model.C0 + r2 * muladd(r2, model.C4_σ4, model.C2_σ2))
@@ -168,13 +168,13 @@ end
 function JBB()
     ϵ = [1.0 1.5 0.75; 1.5 0.5 1.5; 0.75 1.5 0.75]
     σ = [1.0 0.8 0.9; 0.8 0.88 0.8; 0.9 0.8 0.94]
-    JBB_11 = SmoothLennardJones(ϵ[1,1], σ[1,1])
-    JBB_12 = SmoothLennardJones(ϵ[1,2], σ[1,2])
-    JBB_13 = SmoothLennardJones(ϵ[1,3], σ[1,3])
-    JBB_22 = SmoothLennardJones(ϵ[2,2], σ[2,2])
-    JBB_23 = SmoothLennardJones(ϵ[2,3], σ[2,3])
-    JBB_33 = SmoothLennardJones(ϵ[3,3], σ[3,3])
-    return SMatrix{3, 3, typeof(JBB_11), 9}([JBB_11 JBB_12 JBB_13; JBB_12 JBB_22 JBB_23; JBB_13 JBB_23 JBB_33])
+    JBB_11 = SmoothLennardJones(ϵ[1, 1], σ[1, 1])
+    JBB_12 = SmoothLennardJones(ϵ[1, 2], σ[1, 2])
+    JBB_13 = SmoothLennardJones(ϵ[1, 3], σ[1, 3])
+    JBB_22 = SmoothLennardJones(ϵ[2, 2], σ[2, 2])
+    JBB_23 = SmoothLennardJones(ϵ[2, 3], σ[2, 3])
+    JBB_33 = SmoothLennardJones(ϵ[3, 3], σ[3, 3])
+    return SMatrix{3,3,typeof(JBB_11),9}([JBB_11 JBB_12 JBB_13; JBB_12 JBB_22 JBB_23; JBB_13 JBB_23 JBB_33])
     #return [JBB_11 JBB_12 JBB_13; JBB_12 JBB_22 JBB_23; JBB_13 JBB_23 JBB_33]
 end
 
@@ -201,12 +201,12 @@ end
 
 function GeneralKG(ϵ, σ, k, r0; rcut=2^(1 / 6) * σ, ϵbond=ϵ, σbond=σ, rcutbond=rcut)
     name = "GeneralKG"
-    r02 = r0 ^ 2
-    rcut2 = rcut ^ 2
-    rcut2bond = rcutbond ^2
-    kr02 = - k * r02 / 2
-    σ2 = σ ^ 2
-    σ2bond = σbond ^ 2
+    r02 = r0^2
+    rcut2 = rcut^2
+    rcut2bond = rcutbond^2
+    kr02 = -k * r02 / 2
+    σ2 = σ^2
+    σ2bond = σbond^2
     shift = lennard_jones(rcut2, 4ϵ, σ2)
     shiftbond = lennard_jones(rcut2bond, 4ϵbond, σ2bond)
     return GeneralKG(name, ϵ, 4ϵ, ϵbond, 4ϵbond, σ2, σ2bond, shift, shiftbond, k, kr02, r02, rcut, rcut2, rcutbond, rcut2bond)
@@ -220,7 +220,7 @@ end
     u_fene = r2 ≤ model.r02 ? fene(r2, model.kr02, model.r02) : Inf
     u_lj = 0.0
     if r2 ≤ model.rcut2bond
-       u_lj += lennard_jones(r2, model.ϵ4bond, model.σ2bond) - model.shiftbond
+        u_lj += lennard_jones(r2, model.ϵ4bond, model.σ2bond) - model.shiftbond
     end
     return u_fene + u_lj
 end
@@ -229,16 +229,16 @@ cutoff(model::DiscreteModel) = model.rcut
 cutoff2(model::DiscreteModel) = model.rcut2
 
 function Trimer()
-    ϵ = SMatrix{3, 3, Float64}([1.0 1.0 1.0; 1.0 1.0 1.0; 1.0 1.0 1.0])
-    σ = SMatrix{3, 3, Float64}([0.9 0.95 1.0; 0.95 1.0 1.05; 1.0 1.05 1.1])
-    k = SMatrix{3, 3, Float64}([0.0 33.241 30.0; 33.241 0.0 27.210884; 30.0 27.210884 0.0])
-    r0 = SMatrix{3, 3, Float64}([0.0 1.425 1.5; 1.425 0.0 1.575; 1.5 1.575 0.0])
-    KG_11 = GeneralKG(ϵ[1,1], σ[1,1], k[1,1], r0[1,1])
-    KG_12 = GeneralKG(ϵ[1,2], σ[1,2], k[1,2], r0[1,2])
-    KG_13 = GeneralKG(ϵ[1,3], σ[1,3], k[1,3], r0[1,3])
-    KG_22 = GeneralKG(ϵ[2,2], σ[2,2], k[2,2], r0[2,2])
-    KG_23 = GeneralKG(ϵ[2,3], σ[2,3], k[2,3], r0[2,3])
-    KG_33 = GeneralKG(ϵ[3,3], σ[3,3], k[3,3], r0[3,3])
-    return SMatrix{3, 3, typeof(KG_11), 9}([KG_11 KG_12 KG_13; KG_12 KG_22 KG_23; KG_13 KG_23 KG_33])
+    ϵ = SMatrix{3,3,Float64}([1.0 1.0 1.0; 1.0 1.0 1.0; 1.0 1.0 1.0])
+    σ = SMatrix{3,3,Float64}([0.9 0.95 1.0; 0.95 1.0 1.05; 1.0 1.05 1.1])
+    k = SMatrix{3,3,Float64}([0.0 33.241 30.0; 33.241 0.0 27.210884; 30.0 27.210884 0.0])
+    r0 = SMatrix{3,3,Float64}([0.0 1.425 1.5; 1.425 0.0 1.575; 1.5 1.575 0.0])
+    KG_11 = GeneralKG(ϵ[1, 1], σ[1, 1], k[1, 1], r0[1, 1])
+    KG_12 = GeneralKG(ϵ[1, 2], σ[1, 2], k[1, 2], r0[1, 2])
+    KG_13 = GeneralKG(ϵ[1, 3], σ[1, 3], k[1, 3], r0[1, 3])
+    KG_22 = GeneralKG(ϵ[2, 2], σ[2, 2], k[2, 2], r0[2, 2])
+    KG_23 = GeneralKG(ϵ[2, 3], σ[2, 3], k[2, 3], r0[2, 3])
+    KG_33 = GeneralKG(ϵ[3, 3], σ[3, 3], k[3, 3], r0[3, 3])
+    return SMatrix{3,3,typeof(KG_11),9}([KG_11 KG_12 KG_13; KG_12 KG_22 KG_23; KG_13 KG_23 KG_33])
 end
 ###############################################################################
