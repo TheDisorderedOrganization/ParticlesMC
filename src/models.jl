@@ -53,7 +53,7 @@ struct SoftSpheres{T<:AbstractFloat,N<:Number} <: DiscreteModel
     name::String
     ϵ::T
     σ::T
-    σ2::
+    σ2::T
     n::Int
     ndiv2::N
     rcut::T
