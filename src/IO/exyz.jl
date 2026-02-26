@@ -7,18 +7,18 @@ end
 
 function parse_column_string(column_str::AbstractString, ::EXYZ)
     columns = split(column_str, ":")
-    column_info = OrderedDict{String, Vector}() # Use OrderedDict to maintain order
+    column_info = OrderedDict{String,Vector}() # Use OrderedDict to maintain order
     i, index = 1, 1
     types = ["S", "I", "R"]
     while i <= length(columns)
         if i + 2 <= length(columns) && (columns[i+1] ∈ types)
-          column_name = columns[i]
-          dimension = parse(Int, columns[i + 2])
-          column_info[column_name] = [dimension, index]
-          index += dimension
-          i += 3 # Skip data type and dimension
+            column_name = columns[i]
+            dimension = parse(Int, columns[i+2])
+            column_info[column_name] = [dimension, index]
+            index += dimension
+            i += 3 # Skip data type and dimension
         else
-          i += 1
+            i += 1
         end
     end
 
@@ -43,8 +43,8 @@ function read_header(data, format::EXYZ)
     box = lattice_matrix[diagind(lattice_matrix)]
     column_match = match(r"Properties=(.*)", metadata_line)
     column_str = mat === nothing ? nothing : column_match.captures[1]
-    column_info =  parse_column_string(column_str, format)
-    return N, box, column_info, []
+    column_info = parse_column_string(column_str, format)
+    return N, box, column_info, split(metadata_line, " ")
 end
 
 function get_selrow(::EXYZ, N, m)
@@ -79,7 +79,7 @@ function read_bonds_header(bonds, format::EXYZ)
     metadata_line = bonds[2]
     column_match = match(r"Properties=(.*)", metadata_line)
     column_str = column_match === nothing ? nothing : column_match.captures[1]
-    column_info =  parse_column_string(column_str, format)
+    column_info = parse_column_string(column_str, format)
     return N_bonds, column_info
 end
 

@@ -11,7 +11,7 @@ end
 
 function parse_column_string(column_str::AbstractString, ::XYZ; d::Int=3)
     columns = split(column_str, ",")
-    column_info = OrderedDict{String, Vector}() # Use OrderedDict to maintain order
+    column_info = OrderedDict{String,Vector}() # Use OrderedDict to maintain order
     index = 1
     for column_name in columns
         if column_name == "molecule"
@@ -21,10 +21,10 @@ function parse_column_string(column_str::AbstractString, ::XYZ; d::Int=3)
             dimension = 1
             column_info[column_name] = [dimension, index]
         elseif column_name == "position"
-            column_info["pos"] =  [d, index]
+            column_info["pos"] = [d, index]
         elseif column_name == "bond"
             dimension = 2
-            column_info["bond"] =  [2, index]
+            column_info["bond"] = [2, index]
         elseif column_name == "btype"
             dimension = 1
             column_info[column_name] = [dimension, index]
@@ -39,7 +39,7 @@ end
 function read_header(data, format::XYZ)
     N = parse(Int, data[1])  # Number of atoms or entries
     metadata = split(data[2], " ")  # Metadata split into an array
-    
+
     # Extract cell vector from metadata
     cell_str = replace(metadata[findfirst(startswith("cell:"), metadata)], "cell:" => "")
     cell_vector = parse.(Float64, split(cell_str, ","))
@@ -47,7 +47,7 @@ function read_header(data, format::XYZ)
     box = SVector{d}(cell_vector)
     column_str = replace(metadata[findfirst(startswith("columns:"), metadata)], "columns:" => "")
     column_info = parse_column_string(column_str, format; d=d)
-    return N, box, column_info, []
+    return N, box, column_info, metadata
 end
 
 function get_system_column(::Atoms, ::XYZ)

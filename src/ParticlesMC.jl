@@ -90,7 +90,7 @@ Base.getindex(system::Atoms, i::Int) = system.position[i], system.species[i]
 
 Conforms to Julia iterator interface; yields the position of the current index.
 """
-function Base.iterate(system::Union{Atoms, Molecules}, state=1)
+function Base.iterate(system::Union{Atoms,Molecules}, state=1)
     state > length(system) && return nothing  # Stop iteration
     return (system.position[state], state + 1)  # Return element & next state
 end
@@ -170,18 +170,18 @@ ParticlesMC implemented in Comonicon.
 
     if bonds !== nothing
         chains = load_chains(config, args=Dict(
-            "temperature" => [temperature],
-            "density" => [density],
-            "model" => [model],
+            "temperature" => temperature,
+            "density" => density,
+            "model" => model,
             "list_type" => list_type,
             "list_parameters" => list_parameters,
             "bonds" => bonds,
         ))
     else
         chains = load_chains(config, args=Dict(
-            "temperature" => [temperature],
-            "density" => [density],
-            "model" => [model],
+            "temperature" => temperature,
+            "density" => density,
+            "model" => model,
             "list_type" => list_type,
             "list_parameters" => list_parameters,
         ))
@@ -200,7 +200,7 @@ ParticlesMC implemented in Comonicon.
         if action == "Displacement"
             action_obj = Displacement(0, zero(chains[1].box), 0.0)
             if "sigma" in keys(parameters)
-                param_obj = ComponentArray(σ = parameters["sigma"])
+                param_obj = ComponentArray(σ=parameters["sigma"])
             else
                 error("Missing parameter 'sigma' for action: $action")
             end
@@ -254,7 +254,7 @@ ParticlesMC implemented in Comonicon.
         fmt = get(output, "fmt", "XYZ")
         interval = scheduler_params["linear_interval"]
         if "log_base" in keys(scheduler_params)
-            block = build_schedule(interval, 0,  2.0)
+            block = build_schedule(interval, 0, 2.0)
             sched = build_schedule(steps, burn, block)
         else
             sched = build_schedule(steps, burn, interval)
@@ -262,34 +262,34 @@ ParticlesMC implemented in Comonicon.
         if alg == "StoreCallbacks"
             callbacks = map(c -> eval(Meta.parse("$c")), callbacks)
             algorithm = (
-                algorithm = eval(Meta.parse(alg)),
-                callbacks = callbacks,
-                scheduler = sched,
+                algorithm=eval(Meta.parse(alg)),
+                callbacks=callbacks,
+                scheduler=sched,
             )
         elseif alg == "StoreAcceptance"
             dependencies = map(d -> eval(Meta.parse("$d")), dependencies)
             algorithm = (
-                algorithm = eval(Meta.parse(alg)),
-                dependencies = dependencies,
-                scheduler = sched,
+                algorithm=eval(Meta.parse(alg)),
+                dependencies=dependencies,
+                scheduler=sched,
             )
         elseif alg == "StoreTrajectories" || alg == "StoreLastFrames"
-             algorithm = (
-                algorithm = eval(Meta.parse(alg)),
-                scheduler = sched,
-                fmt = eval(Meta.parse("$(fmt)()")),
+            algorithm = (
+                algorithm=eval(Meta.parse(alg)),
+                scheduler=sched,
+                fmt=eval(Meta.parse("$(fmt)()")),
             )
         elseif alg == "PrintTimeSteps"
             algorithm = (
-                algorithm = eval(Meta.parse(alg)),
-                scheduler = sched,
+                algorithm=eval(Meta.parse(alg)),
+                scheduler=sched,
             )
         else
             error("Unsupported output algorithm: $alg")
         end
         push!(algorithm_list, algorithm)
     end
-    M=1
+    M = 1
     path = joinpath(output_path)
     simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
 
