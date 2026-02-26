@@ -68,7 +68,7 @@ function load_configuration(io, format::Arianna.Format; m=1)
     end
     if "pos" in keys(column_info)
         pos_d, pos_index = column_info["pos"]
-        position = Vector{SVector{pos_d, Float64}}(undef, N)
+        position = Vector{SVector{pos_d,Float64}}(undef, N)
     else
         missing_key_error("pos")
     end
@@ -85,12 +85,12 @@ function load_configuration(io, format::Arianna.Format; m=1)
         end
         position[i] = SVector{pos_d}(parse.(Float64, split_line[pos_index:pos_index+pos_d-1]))
     end
-    config_dict = Dict( :N => N,
-                        :d => pos_d,
-                        :box => box,
-                        :species => species,
-                        :position => position,
-                        :metadata => metadata
+    config_dict = Dict(:N => N,
+        :d => pos_d,
+        :box => box,
+        :species => species,
+        :position => position,
+        :metadata => metadata
     )
     if bool_molecule
         config_dict[:molecule] = molecule
@@ -133,22 +133,22 @@ function get_model(data, i::Int, j::Int)
         rcut = get(m, "rcut", nothing)
 
         return GeneralKG(m["epsilon"], m["sigma"], m["k"], m["r0"];
-                        filter_kwargs(
-                            :rcut => get(m, "rcut", nothing),
-                            :ϵbond => get(m, "epsilonbond", nothing),
-                            :σbond => get(m, "sigmabond", nothing),
-                            :rcutbond => get(m, "rcutbond", nothing),
-                            )...)
+            filter_kwargs(
+                :rcut => get(m, "rcut", nothing),
+                :ϵbond => get(m, "epsilonbond", nothing),
+                :σbond => get(m, "sigmabond", nothing),
+                :rcutbond => get(m, "rcutbond", nothing),
+            )...)
     elseif m["name"] == "SmoothLennardJones"
         return SmoothLennardJones(m["epsilon"], m["sigma"];
-                                filter_kwargs(
-                                :rcut => get(m, "rcut", nothing))...)
+            filter_kwargs(
+                :rcut => get(m, "rcut", nothing))...)
     elseif m["name"] == "LennardJones"
         return LennardJones(m["epsilon"], m["sigma"];
-                                filter_kwargs(
-                                    :rcut => get(m, "rcut", nothing),
-                                    :shift_potential => get(m, "shift_potential", true),
-                                    )...)
+            filter_kwargs(
+                :rcut => get(m, "rcut", nothing),
+                :shift_potential => get(m, "shift_potential", true),
+            )...)
     else
         error("Model $(m["name"]) is not implemented")
         return nothing
@@ -181,11 +181,11 @@ function read_bonds(data, N, format::Arianna.Format)
         row_bonds = get_row_bonds(selrow, N, format)
         bond = [Vector{Int}() for _ in 1:N]
         for i in 1:N_bonds
-            atom_i, atom_j = parse.(Int, split(bonds_data[row_bonds + i], " ")[bond_index:bond_index+1])
+            atom_i, atom_j = parse.(Int, split(bonds_data[row_bonds+i], " ")[bond_index:bond_index+1])
             push!(bond[atom_i], atom_j)
             push!(bond[atom_j], atom_i)
             if bool_btype
-                btype_ij = parse.(Int, split(bonds_data[row_bonds + i], " ")[btype_index])
+                btype_ij = parse.(Int, split(bonds_data[row_bonds+i], " ")[btype_index])
             else
                 btype_ij = 1
             end
@@ -207,57 +207,81 @@ function broadcast_dict(dicts, key)
     return [dict[key] for dict in dicts]
 end
 
-function load_chains(init_path; args=Dict(), verbose=false)
+function load_chains(init_path; args=Dict(), filename="", verbose=false)
     input_files = Vector{String}()
     if isfile(init_path)
         push!(input_files, init_path)
     elseif isdir(init_path)
         for (root, dirs, files) in walkdir(init_path)
             for file in files
-                push!(input_files, joinpath(root, file))
+                if occursin(filename, file)
+                    push!(input_files, joinpath(root, file))
+                end
             end
         end
     end
     verbose && println("Processing $(length(input_files)) configuration file(s)")
     verbose && @show input_files
+
     config_dict = load_configuration.(input_files)
     initial_species_array = broadcast_dict(config_dict, :species)
-    initial_position_array =  broadcast_dict(config_dict, :position)
-    initial_box_array =  broadcast_dict(config_dict, :box)
+    initial_position_array = broadcast_dict(config_dict, :position)
+    initial_box_array = broadcast_dict(config_dict, :box)
     metadata_array = broadcast_dict(config_dict, :metadata)
+
     N, d = config_dict[1][:N], config_dict[1][:d]
     @assert all(isequal(N), length.(initial_position_array))
     @assert all(isequal(d), vcat([length.(X) for X in initial_position_array]...))
+
     initial_density_array = length.(initial_position_array) ./ prod.(initial_box_array)
-    if length(metadata_array) > 1
-        initial_temperature_array = [parse(Float64, split(filter(x -> occursin("T:", x), metadata)[1], ":")[2]) for metadata in metadata_array]
-        input_models = [split(filter(x -> occursin("model:", x), metadata)[1], ":")[2] for metadata in metadata_array]
-        @assert all(isequal(input_models[1]), input_models)
+
+    has_temp = all(m -> any(x -> occursin("T:", x), m), metadata_array)
+    has_model = all(m -> any(x -> occursin("model:", x), m), metadata_array)
+
+    if length(metadata_array) ≥ 1 && has_temp
+        initial_temperature_array = [parse(Float64, split(filter(x -> occursin("T:", x), m)[1], ":")[2]) for m in metadata_array]
     else
         initial_temperature_array = nothing
+    end
+
+    if length(metadata_array) ≥ 1 && has_model
+        input_models = [split(filter(x -> occursin("model:", x), m)[1], ":")[2] for m in metadata_array]
+        @assert all(isequal(input_models[1]), input_models)
+    else
         input_models = nothing
     end
-    # Update density, temperature and model if needed
+
+    # Update density if needed
     if haskey(args, "density") && !isnothing(args["density"])
         λs = (initial_density_array ./ args["density"]) .^ (1 / d)
         initial_density_array .= args["density"]
         initial_position_array .= [X .* λ for (X, λ) in zip(initial_position_array, λs)]
         initial_box_array .= [box .* λ for (box, λ) in zip(initial_box_array, λs)]
     end
+
+    # Safely overriding arrays without type or dimension conflicts
     if haskey(args, "temperature") && !isnothing(args["temperature"])
-        initial_temperature_array = args["temperature"]
+        if args["temperature"] isa AbstractVector
+            initial_temperature_array = args["temperature"]
+        else
+            initial_temperature_array = fill(args["temperature"], length(input_files))
+        end
     elseif isnothing(initial_temperature_array)
         missing_key_error("temperature")
     end
-    if haskey(args, "model") && !isnothing(args["model"])
-        input_models = args["model"]
 
+    if haskey(args, "model") && !isnothing(args["model"])
+        if args["model"] isa AbstractVector
+            input_models = args["model"]
+        else
+            input_models = fill(args["model"], length(input_files))
+        end
     elseif isnothing(input_models)
         missing_key_error("model")
     end
+
     # Fold back into the box
     initial_position_array .= [[fold_back(x, box) for x in X] for (X, box) in zip(initial_position_array, initial_box_array)]
-    # Parse model
 
     # Copy configurations nsim times (replicas)
     if haskey(args, "nsim") && !isnothing(args["nsim"]) && args["nsim"] > 1
@@ -268,40 +292,43 @@ function load_chains(init_path; args=Dict(), verbose=false)
         initial_density_array = vcat([[copy(x) for _ in 1:nsim] for x in initial_density_array]...)
         initial_temperature_array = vcat([[copy(x) for _ in 1:nsim] for x in initial_temperature_array]...)
     end
-    # Handle cell list (this is classy)
+
+    # Parse model
     available_species = unique(vcat(initial_species_array...))
     n_species = length(available_species)
     if input_models[1] isa Dict
-        model_matrix = SMatrix{n_species, n_species}([get_model(input_models[1], i, j) for i in 1:n_species, j in 1:n_species])
+        model_matrix = SMatrix{n_species,n_species}([get_model(input_models[1], i, j) for i in 1:n_species, j in 1:n_species])
     elseif occursin(r"\(", input_models[1]) && occursin(r"\)", input_models[1])
-        model_matrix = eval(Meta.parse(input_models[1]))  # Parse the string if it has parentheses
+        model_matrix = eval(Meta.parse(input_models[1]))
     else
-        model_matrix =  eval(Meta.parse(input_models[1] * "()"))  # Else, append () and evaluate
+        model_matrix = eval(Meta.parse(input_models[1] * "()"))
     end
     @assert isa(model_matrix, AbstractArray)
 
     maxcut = maximum([m.rcut for m in model_matrix])
     Z = mean(initial_density_array) * volume_sphere(maxcut, d)
     list_type = Z / N < 0.1 ? LinkedList : EmptyList
+
     if haskey(args, "list_type") && !isnothing(args["list_type"])
         list_type = eval(Meta.parse(args["list_type"]))
     end
+
     list_parameters = get(args, "list_parameters", nothing)
     verbose && println("Using $list_type as cell list type")
-    # Create independent chains
+
+    # Create independent chains (Preserves V2 System constraints)
     bool_molecule = :molecule in keys(config_dict[1])
     if bool_molecule
         initial_molecule_array = broadcast_dict(config_dict, :molecule)
         initial_bond_array = broadcast_dict(config_dict, :bond)
-        #initial_btype_array = broadcast_dict(config_dict, :btype)
         chains = [System(initial_position_array[k], initial_species_array[k], initial_molecule_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, initial_bond_array[k], list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
     else
         chains = [System(initial_position_array[k], initial_species_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
     end
+
     verbose && println("$(length(chains)) chains created")
     return chains
 end
-
 function formatted_string(num::Real, digits::Integer)
     fmtstr = "%." * string(digits) * "f"
     fmt = Printf.Format(fmtstr)
