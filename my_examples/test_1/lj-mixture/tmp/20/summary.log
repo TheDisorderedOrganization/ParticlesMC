@@ -1,0 +1,45 @@
+SIMULATION SUMMARY
+
+Simulation:
+	Steps: 1000
+	Number of chains: 1
+	Number of algorithms: 4
+	Verbose: true
+	Started on 2026-04-09T10:09:04.120
+
+System:
+	Number of particles: 1000
+	Dimensions: 3
+	Cell: [14.938015821857212, 14.938015821857212, 14.938015821857212]
+	Density: 0.30000000000000016
+	Temperature: 1.6438
+	Neighbour list: LinkedList
+
+Algorithms:
+	Metropolis
+		Calls: 1000
+		MC steps per simulation step: 1000
+		Seed: 42
+		Parallel: false
+		Moves:
+			Move 1:
+				Action: Displacement
+				Policy: SimpleGaussian
+				Parameters: [0.05]
+				Weight: 0.9
+			Move 2:
+				Action: DiscreteSwap
+				Policy: DoubleUniform
+				Parameters: Float64[]
+				Weight: 0.1
+	Arianna.StoreCallbacks
+		Calls: 10
+	Arianna.StoreAcceptance
+		Calls: 10
+	Arianna.StoreLastFrames
+		Calls: 1
+
+Report:
+	Simulation time: 17.193784208 s
+	Simulation size: 0.08780765533447266 MB
+	Status: Completed on 2026-04-09T10:09:21.487

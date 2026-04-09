@@ -1,7 +1,7 @@
 [system]
-config = "./inputframe.xyz"
-temperature = 2.0
-density = DENSITY
+config = "../../1-create-config-right-density/inputframe.xyz"
+temperature = 3.0
+density = 1.2
 list_type = "LinkedList"
 
 [model]
@@ -52,7 +52,7 @@ r0 = 1.65
 
 [simulation]
 type = "Metropolis"
-steps = 10000
+steps = 100000 ##5000000
 seed = 10
 parallel = false
 
@@ -69,8 +69,13 @@ policy = "DoubleUniform"
 
 [[simulation.output]]
 algorithm = "StoreCallbacks"
-callbacks = ["energy"] ##[, "acceptance"]
-scheduler_params = {linear_interval = 1}
+callbacks = ["energy"]
+scheduler_params = {linear_interval = 1000}
+
+[[simulation.output]]
+algorithm = "StoreAcceptance"
+dependencies = ["Metropolis"]
+scheduler_params = {linear_interval = 1000}
 
 [[simulation.output]]
 algorithm = "StoreLastFrames"
@@ -78,5 +83,10 @@ scheduler_params = {linear_interval = 10000}
 fmt = "XYZ"
 
 [[simulation.output]]
+algorithm = "StoreTrajectories"
+scheduler_params = {linear_interval = 1000}
+fmt = "XYZ"
+
+[[simulation.output]]
 algorithm = "PrintTimeSteps"
-scheduler_params = {linear_interval = 1}
+scheduler_params = {linear_interval = 1000}

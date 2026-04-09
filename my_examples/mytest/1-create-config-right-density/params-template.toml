@@ -5,50 +5,35 @@ density = DENSITY
 list_type = "LinkedList"
 
 [model]
-
 [model."1-1"]
-name = "GeneralKG"
+name = "LennardJones"
 epsilon = 1.0
 sigma = 0.9
-k = 37.03703703703703
-r0 = 1.35
 
 [model."1-2"]
-name = "GeneralKG"
+name = "LennardJones"
 epsilon = 1.0
 sigma = 0.95
-k = 33.24099722991689
-r0 = 1.425
 
 [model."1-3"]
-name = "GeneralKG"
+name = "LennardJones"
 epsilon = 1.0
 sigma = 1.0
-k = 30.0
-r0 = 1.5
 
 [model."2-2"]
-name = "GeneralKG"
+name = "LennardJones"
 epsilon = 1.0
 sigma = 1.0
-k = 30.0
-r0 = 1.5
 
 [model."2-3"]
-name = "GeneralKG"
+name = "LennardJones"
 epsilon = 1.0
 sigma = 1.05
-k = 27.2108843537415
-r0 = 1.575
 
 [model."3-3"]
-name = "GeneralKG"
+name = "LennardJones"
 epsilon = 1.0
 sigma = 1.1
-k = 24.79338842975207
-r0 = 1.65
-
-
 
 [simulation]
 type = "Metropolis"
@@ -58,14 +43,27 @@ parallel = false
 
 [[simulation.move]]
 action = "Displacement"
-probability = 0.8
+probability = 0.7
 policy = "SimpleGaussian"
 parameters = {sigma = 0.05}
 
 [[simulation.move]]
-action = "MoleculeFlip"
-probability = 0.2
+action = "DiscreteSwap"
+probability = 0.1
 policy = "DoubleUniform"
+parameters = {species = [1, 2]}
+
+[[simulation.move]]
+action = "DiscreteSwap"
+probability = 0.1
+policy = "DoubleUniform"
+parameters = {species = [1, 3]}
+
+[[simulation.move]]
+action = "DiscreteSwap"
+probability = 0.1
+policy = "DoubleUniform"
+parameters = {species = [2, 3]}
 
 [[simulation.output]]
 algorithm = "StoreCallbacks"

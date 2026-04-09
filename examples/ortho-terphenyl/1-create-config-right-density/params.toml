@@ -1,7 +1,7 @@
 [system]
 config = "./inputframe.xyz"
 temperature = 2.0
-density = DENSITY
+density = 0.2
 list_type = "LinkedList"
 
 [model]

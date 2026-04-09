@@ -1,7 +1,7 @@
 [system]
-config = "./inputframe.xyz"
-temperature = 2.0
-density = DENSITY
+config = "../../2-equilibrate-at-different-temperatures/1.1/chains/1/lastframe.xyz"
+temperature = 1.1
+density = 1.2
 list_type = "LinkedList"
 
 [model]
@@ -52,25 +52,25 @@ r0 = 1.65
 
 [simulation]
 type = "Metropolis"
-steps = 10000
+steps = 100000
 seed = 10
 parallel = false
 
 [[simulation.move]]
 action = "Displacement"
-probability = 0.8
+probability = 0.999 #0.8
 policy = "SimpleGaussian"
 parameters = {sigma = 0.05}
 
 [[simulation.move]]
 action = "MoleculeFlip"
-probability = 0.2
+probability = 0.001 #0.2
 policy = "DoubleUniform"
 
 [[simulation.output]]
 algorithm = "StoreCallbacks"
-callbacks = ["energy"] ##[, "acceptance"]
-scheduler_params = {linear_interval = 1}
+callbacks = ["energy"]
+scheduler_params = {linear_interval = 1000}
 
 [[simulation.output]]
 algorithm = "StoreLastFrames"
@@ -78,5 +78,10 @@ scheduler_params = {linear_interval = 10000}
 fmt = "XYZ"
 
 [[simulation.output]]
+algorithm = "StoreTrajectories"
+scheduler_params = {linear_interval = 4096, log_base=2.0}
+fmt = "XYZ"
+
+[[simulation.output]]
 algorithm = "PrintTimeSteps"
-scheduler_params = {linear_interval = 1}
+scheduler_params = {linear_interval = 1000}
