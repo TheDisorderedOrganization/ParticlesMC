@@ -20,6 +20,7 @@ include("models.jl")
 include("molecules.jl")
 include("atoms.jl")
 include("moves.jl")
+include("msad.jl")
 
 """Return the position of particle `i` in `system`.
 
