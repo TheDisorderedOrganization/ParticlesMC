@@ -237,6 +237,31 @@ ParticlesMC implemented in Comonicon.
             else
                 error("Unsupported policy: $policy for action: $action")
             end
+        elseif alg == "MSADTracker"
+            # read theta_T from parameters
+            parameters = get(output, "parameters", Dict())
+            theta_T = Float64(get(parameters, "theta_T", π/4))
+
+            # build output schedule separately from compute schedule
+            output_scheduler_params = get(output, "output_scheduler_params", Dict())
+            if "log_base" in keys(output_scheduler_params)
+                output_sched = build_schedule(steps, burn, 2.0)
+            elseif "linear_interval" in keys(output_scheduler_params)
+                output_sched = build_schedule(steps, burn, 
+                                output_scheduler_params["linear_interval"])
+            else
+                output_sched = sched  # default: same as compute
+            end
+
+            # convert to Vector{Int} — build_schedule returns this already
+            algorithm = (
+                algorithm=MSADTracker,
+                scheduler=sched,           # compute schedule
+                theta_T=theta_T,
+                output_schedule=output_sched,
+                path=output_path,
+            )
+
         else
             error("Unsupported action: $action")
         end
