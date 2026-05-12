@@ -151,58 +151,42 @@ function Arianna.make_step!(simulation::Simulation, tracker::MSADTracker)
         # compute current body frames shared by all three methods
         R_all = get_all_body_frames(system)
 
-        # ── Integral update (every step) ──────────────────────────
-        # Python: dR = np.einsum('mij,mik->mjk', R_prev_all, R_all)
-        #         phi_all += rotation_vector_batch(dR)
+        # Integral update
         for m in 1:N_mol
             dR = state.R_prev[m]' * R_all[m]
             state.phi_integral[m] = state.phi_integral[m] + rotation_vector(dR)
         end
 
-        # ── Threshold update (every step) ─────────────────────────
-        # Python: dR_thresh   = np.einsum('mij,mik->mjk', R_ref_thresh[k], R_all)
-        #         phi_current = rotation_vector_batch(dR_thresh)
-        #         phi_total   = phi_acc_thresh[k] + phi_current
-        #         relay       = norms >= theta_T
+        # Threshold update
         phi_current = Vector{SVector{3,eltype(tracker.theta_T)}}(undef, N_mol)
         phi_total   = Vector{SVector{3,eltype(tracker.theta_T)}}(undef, N_mol)
         for m in 1:N_mol
             dR             = state.R_ref_thresh[m]' * R_all[m]
             phi_current[m] = rotation_vector(dR)
             phi_total[m]   = state.phi_acc[m] + phi_current[m]
-            # relay — Python: phi_acc_thresh[k][relay] = phi_total[relay]
-            #                 R_ref_thresh[k][relay]   = R_all[relay]
             if norm(phi_current[m]) >= tracker.theta_T
                 state.phi_acc[m]      = phi_total[m]
                 state.R_ref_thresh[m] = R_all[m]
             end
         end
 
-        # ── Advance R_prev (every step) ───────────────────────────
-        # Python: R_prev_all = R_all.copy()
         state.R_prev .= R_all
 
-        # ── Output (only on output_schedule) ──────────────────────
-        # Python: times.append(frame_idx) + msad_euler/integral/thresh.append(...)
+        # output is time match output schedule
         if t in tracker.output_schedule
-            # Euler — only computed here, not accumulated
-            # Python: R_rel = np.einsum('mij,mik->mjk', R0_all, R_all)
-            #         thetas = rotation_vector_batch(R_rel)
-            #         msad_e = np.sum(norm(thetas)**2) / N_mol
+            # Euler only computed here not accumulated
             msad_euler = sum(
                 norm(rotation_vector(state.R0[m]' * R_all[m]))^2
                 for m in 1:N_mol
             ) / N_mol
 
             # Integral
-            # Python: msad_i = np.sum(norm(phi_all)**2) / N_mol
             msad_integral = sum(
                 norm(state.phi_integral[m])^2
                 for m in 1:N_mol
             ) / N_mol
 
             # Threshold
-            # Python: np.sum(norm(phi_total)**2) / N_mol
             msad_thresh = sum(
                 norm(phi_total[m])^2
                 for m in 1:N_mol
