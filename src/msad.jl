@@ -87,7 +87,7 @@ mutable struct MSADTracker{T} <: AriannaAlgorithm
     theta_T::T                      # threshold angle in radians
     compute_schedule::Vector{Int}   # schedule for computing rotation for integral and threshold methods
     output_schedule::Vector{Int}    # schedule for writing MSAD to disk 
-    paths::Vector{String}           # paths to store files
+    path::Vector{String}           # paths to store files
     files_integral::Vector{IOStream}    # file to write rotation vector in integral method
     files_thresh::Vector{IOStream}   # file to write rotation vector in threshold method
 end
@@ -108,11 +108,8 @@ function MSADTracker(chains; theta_T::T, output_schedule::Vector{Int}, path::Str
 
     dirs  = [joinpath(path, "chains", "$c") for c in 1:n]
 
-    paths_integral = [joinpath(d, "phi_integral.dat") for d in dirs]
-    paths_thresh = [joinpath(d, "phi_thresh.dat") for d in dirs]
-
-    files_integral = Vector{IOStream}(undef, n)
-    files_thresh   = Vector{IOStream}(undef, n)
+    algorithm.files_integral[c] = open(joinpath(dir, "phi_integral.dat"), "w")
+    algorithm.files_thresh[c]   = open(joinpath(dir, "phi_thresh.dat"),   "w")
 
     return MSADTracker{T}(states, theta_T, compute_schedule, output_schedule, paths_integral, paths_thresh, files_integral, files_thresh)
 end
