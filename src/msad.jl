@@ -163,9 +163,9 @@ function Arianna.make_step!(simulation::Simulation, algorithm::MSADTracker)
         for m in 1:N_mol
             dR             = state.R_ref_thresh[m]' * R_all[m]
             phi_current[m] = rotation_vector(dR)
-            phi_total[m]   = state.phi_acc[m] + phi_current[m]
+            #phi_total[m]   = state.phi_acc[m] + phi_current[m]
             if norm(phi_current[m]) >= algorithm.theta_T
-                state.phi_acc[m]      = phi_total[m]
+                state.phi_acc[m]      = state.phi_acc[m] + phi_current[m]
                 state.R_ref_thresh[m] = R_all[m]
             end
         end
@@ -188,9 +188,14 @@ function Arianna.make_step!(simulation::Simulation, algorithm::MSADTracker)
 
             # Threshold
             msad_thresh = sum(
-                norm(phi_total[m])^2
+                norm(state.phi_acc[m] + phi_current[m])^2
                 for m in 1:N_mol
             ) / N_mol
+            
+            # msad_thresh = sum(
+            #     norm(phi_total[m])^2
+            #     for m in 1:N_mol
+            # ) / N_mol
 
             println(algorithm.files[c], "$t $msad_euler $msad_integral $msad_thresh")
             flush(algorithm.files[c])
