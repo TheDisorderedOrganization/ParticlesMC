@@ -92,7 +92,12 @@ mutable struct MSADTracker{T} <: AriannaAlgorithm
     files_thresh::Vector{IOStream}   # file to write rotation vector in threshold method
 end
 
-function MSADTracker(chains; theta_T::T, output_schedule::Vector{Int}, path::String, scheduler::Vector{Int}=Int[], kwargs...) where {T}
+function MSADTracker(chains;
+                     theta_T::Float64,
+                     output_schedule::Vector{Int}=Int[],
+                     path::String=".",
+                     scheduler::Vector{Int}=Int[],
+                     kwargs...)
 
     compute_schedule = scheduler
 
@@ -103,15 +108,15 @@ function MSADTracker(chains; theta_T::T, output_schedule::Vector{Int}, path::Str
         """
     end
 
-    n = length(chains)
-    states = [MSADState{T}() for _ in 1:n] # one empty state per chain filled during initialise
+    n      = length(chains)
+    states = [MSADState{Float64}() for _ in 1:n]
 
-    dirs  = [joinpath(path, "chains", "$c") for c in 1:n]
+    files_integral = Vector{IOStream}(undef, n)
+    files_thresh   = Vector{IOStream}(undef, n)
 
-    algorithm.files_integral[c] = open(joinpath(dirs, "phi_integral.dat"), "w")
-    algorithm.files_thresh[c]   = open(joinpath(dirs, "phi_thresh.dat"),   "w")
-
-    return MSADTracker{T}(states, theta_T, compute_schedule, output_schedule, paths_integral, paths_thresh, files_integral, files_thresh)
+    return MSADTracker{Float64}(states, theta_T, compute_schedule,
+                                output_schedule, path,
+                                files_integral, files_thresh)
 end
 
 ##### Function to write phi frame #####
@@ -139,13 +144,12 @@ function Arianna.initialise(algorithm::MSADTracker, simulation::Simulation)
         T      = typeof(system.temperature)   # get the float type from system so one can choose Float64 or 32 (generic)
 
         # create output directory if it doesn't exist
-        mkpath(dirname(algorithm.paths_integral[c]))
+        dir = joinpath(algrithm.path, "chains", "$c")
+        mkpath(dir)
 
         # open output file — write header
-        algorithm.files_integral[c] = open(algorithm.paths_integral[c], "w")
-        algorithm.files_thresh[c] = open(algorithm.paths_thresh[c], "w")
-        
-        println(algorithm.files[c], "# t msad_euler msad_integral msad_thresh")
+        algorithm.files_integral[c] = open(joinpath(dir, "phi_integral.dat"), "w")
+        algorithm.files_thresh[c] = open(joinpath(dir, "phi_thresh.dat"), "w")
 
         # compute initial body frames
         R_all = get_all_body_frames(system)
