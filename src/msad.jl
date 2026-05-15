@@ -94,19 +94,19 @@ end
 # called once at t = 0, set the system, the mutable struct and the storing paths 
 ##########                        ##########
 
-function Arianna.initialise(tracker::MSADTracker, simulation::Simulation)
+function Arianna.initialise(algorithm::MSADTracker, simulation::Simulation)
 
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
-        state  = tracker.states[c]
+        state  = algorithm.states[c]
         T      = typeof(system.temperature)   # get the float type from system so one can choose Float64 or 32 (generic)
 
         # create output directory if it doesn't exist
-        mkpath(dirname(tracker.paths[c]))
+        mkpath(dirname(algorithm.paths[c]))
 
         # open output file — write header
-        tracker.files[c] = open(tracker.paths[c], "w")
-        println(tracker.files[c], "# t  msad_euler  msad_integral  msad_thresh")
+        algorithm.files[c] = open(algorithm.paths[c], "w")
+        println(algorithm.files[c], "# t  msad_euler  msad_integral  msad_thresh")
 
         # compute initial body frames
         R_all = get_all_body_frames(system)
@@ -121,8 +121,8 @@ function Arianna.initialise(tracker::MSADTracker, simulation::Simulation)
         state.initialized  = true
 
         # write t=0, all MSAD values are zero at start
-        println(tracker.files[c], "0 0.0 0.0 0.0")
-        flush(tracker.files[c])
+        println(algorithm.files[c], "0 0.0 0.0 0.0")
+        flush(algorithm.files[c])
     end
 
 end
@@ -131,8 +131,8 @@ end
 # close output to not keep unwritten data in memory
 ##########              ##########
 
-function Arianna.finalise(tracker::MSADTracker, ::Simulation)
-    for f in tracker.files
+function Arianna.finalise(algorithm::MSADTracker, ::Simulation)
+    for f in algorithm.files
         close(f)
     end
 end
@@ -140,12 +140,12 @@ end
 ##### Make a step in simulation #####
 ##########                 ##########
 
-function Arianna.make_step!(simulation::Simulation, tracker::MSADTracker)
+function Arianna.make_step!(simulation::Simulation, algorithm::MSADTracker)
     t = simulation.t
 
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
-        state  = tracker.states[c]
+        state  = algorithm.states[c]
         N_mol  = system.Nmol
 
         # compute current body frames shared by all three methods
@@ -158,13 +158,13 @@ function Arianna.make_step!(simulation::Simulation, tracker::MSADTracker)
         end
 
         # Threshold update
-        phi_current = Vector{SVector{3,eltype(tracker.theta_T)}}(undef, N_mol)
-        phi_total   = Vector{SVector{3,eltype(tracker.theta_T)}}(undef, N_mol)
+        phi_current = Vector{SVector{3,eltype(algorithm.theta_T)}}(undef, N_mol)
+        phi_total   = Vector{SVector{3,eltype(algorithm.theta_T)}}(undef, N_mol)
         for m in 1:N_mol
             dR             = state.R_ref_thresh[m]' * R_all[m]
             phi_current[m] = rotation_vector(dR)
             phi_total[m]   = state.phi_acc[m] + phi_current[m]
-            if norm(phi_current[m]) >= tracker.theta_T
+            if norm(phi_current[m]) >= algorithm.theta_T
                 state.phi_acc[m]      = phi_total[m]
                 state.R_ref_thresh[m] = R_all[m]
             end
@@ -173,7 +173,7 @@ function Arianna.make_step!(simulation::Simulation, tracker::MSADTracker)
         state.R_prev .= R_all
 
         # output is time match output schedule
-        if t in tracker.output_schedule
+        if t in algorithm.output_schedule
             # Euler only computed here not accumulated
             msad_euler = sum(
                 norm(rotation_vector(state.R0[m]' * R_all[m]))^2
@@ -192,8 +192,8 @@ function Arianna.make_step!(simulation::Simulation, tracker::MSADTracker)
                 for m in 1:N_mol
             ) / N_mol
 
-            println(tracker.files[c], "$t $msad_euler $msad_integral $msad_thresh")
-            flush(tracker.files[c])
+            println(algorithm.files[c], "$t $msad_euler $msad_integral $msad_thresh")
+            flush(algorithm.files[c])
         end
     end
 end
