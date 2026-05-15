@@ -92,9 +92,16 @@ mutable struct MSADTracker{T} <: AriannaAlgorithm
     files_thresh::Vector{IOStream}   # file to write rotation vector in threshold method
 end
 
-function MSADTracker(chains, theta_T::T, compute_schedule::Vector{Int}, output_schedule::Vector{Int}, path::String) where {T}
+function MSADTracker(chains; theta_T::T, output_schedule::Vector{Int}, path::String, scheduler::Vector{Int}=Int[], kwargs...) where {T}
 
-    @assert all(t in compute_schedule for t in output_schedule) # output_schedule must be a subset of compute_schedule
+    compute_schedule = scheduler
+
+    if !isempty(compute_schedule) && !isempty(output_schedule)
+        @assert all(t in compute_schedule for t in output_schedule) """
+        output_schedule contains steps not in compute_schedule.
+        You cannot write output at a step where make_step! was not called.
+        """
+    end
 
     n = length(chains)
     states = [MSADState{T}() for _ in 1:n] # one empty state per chain filled during initialise
@@ -208,7 +215,7 @@ function Arianna.make_step!(simulation::Simulation, algorithm::MSADTracker)
 
         state.R_prev .= R_all
 
-        # output is time match output schedule
+        # output if time match output schedule
         if t in algorithm.output_schedule
 
             # Integral
