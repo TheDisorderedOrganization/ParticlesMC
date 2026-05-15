@@ -227,7 +227,7 @@ function Arianna.make_step!(simulation::Simulation, algorithm::MSADTracker)
             write_phi_frame(algorithm.files_integral[c],t,N_mol,state.phi_integral)
 
             # Threshold
-            write_phi_frame(algorithm.files_integral[c],t,N_mol,phi_total)
+            write_phi_frame(algorithm.files_thresh[c],t,N_mol,phi_total)
         end
     end
 end
