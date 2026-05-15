@@ -213,7 +213,7 @@ function Arianna.make_step!(simulation::Simulation, algorithm::MSADTracker)
             phi_current[m] = rotation_vector(dR)
             phi_total[m]   = state.phi_acc[m] + phi_current[m]
             if norm(phi_current[m]) >= algorithm.theta_T
-                state.phi_acc[m]      = state.phi_total[m]
+                state.phi_acc[m]      = phi_total[m]
                 state.R_ref_thresh[m] = R_all[m]
             end
         end
@@ -227,7 +227,7 @@ function Arianna.make_step!(simulation::Simulation, algorithm::MSADTracker)
             write_phi_frame(algorithm.files_integral[c],t,N_mol,state.phi_integral)
 
             # Threshold
-            write_phi_frame(algorithm.files_integral[c],t,N_mol,state.phi_total)
+            write_phi_frame(algorithm.files_integral[c],t,N_mol,phi_total)
         end
     end
 end
