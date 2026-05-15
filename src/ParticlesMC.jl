@@ -20,6 +20,7 @@ include("models.jl")
 include("molecules.jl")
 include("atoms.jl")
 include("moves.jl")
+include("msad.jl")
 
 """Return the position of particle `i` in `system`.
 
@@ -236,6 +237,7 @@ ParticlesMC implemented in Comonicon.
             else
                 error("Unsupported policy: $policy for action: $action")
             end
+
         else
             error("Unsupported action: $action")
         end
@@ -284,6 +286,33 @@ ParticlesMC implemented in Comonicon.
                 algorithm=eval(Meta.parse(alg)),
                 scheduler=sched,
             )
+        elseif alg == "MSADTracker"
+            # read theta_T from parameters
+            parameters = get(output, "parameters", Dict())
+            theta_T = Float64(get(parameters, "theta_T", π/4))
+
+            # build output scheduler from scheduler_params for consistency
+            output_sched = sched
+
+            # build compute schedule separately
+            compute_scheduler_params = get(output, "compute_scheduler_params", Dict())
+            if "log_base" in keys(compute_scheduler_params)
+                compute_sched = build_schedule(steps, burn, Float64(compute_scheduler_params["log_base"]))
+            elseif "linear_interval" in keys(compute_scheduler_params)
+                compute_sched = build_schedule(steps, burn, compute_scheduler_params["linear_interval"])
+            else
+                compute_sched = build_schedule(steps, burn, 1)  # every step by default
+            end
+            
+            # convert to Vector{Int} — build_schedule returns this already
+            algorithm = (
+                algorithm=MSADTracker,
+                scheduler=sched,           # compute schedule
+                theta_T=theta_T,
+                output_schedule=output_sched,
+                path=output_path,
+            )
+
         else
             error("Unsupported output algorithm: $alg")
         end
