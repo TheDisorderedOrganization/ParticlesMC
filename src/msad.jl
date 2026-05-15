@@ -108,8 +108,8 @@ function MSADTracker(chains; theta_T::T, output_schedule::Vector{Int}, path::Str
 
     dirs  = [joinpath(path, "chains", "$c") for c in 1:n]
 
-    algorithm.files_integral[c] = open(joinpath(dir, "phi_integral.dat"), "w")
-    algorithm.files_thresh[c]   = open(joinpath(dir, "phi_thresh.dat"),   "w")
+    algorithm.files_integral[c] = open(joinpath(dirs, "phi_integral.dat"), "w")
+    algorithm.files_thresh[c]   = open(joinpath(dirs, "phi_thresh.dat"),   "w")
 
     return MSADTracker{T}(states, theta_T, compute_schedule, output_schedule, paths_integral, paths_thresh, files_integral, files_thresh)
 end
