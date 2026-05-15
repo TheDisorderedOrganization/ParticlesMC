@@ -106,7 +106,7 @@ function Arianna.initialise(algorithm::MSADTracker, simulation::Simulation)
 
         # open output file — write header
         algorithm.files[c] = open(algorithm.paths[c], "w")
-        println(algorithm.files[c], "# t  msad_euler  msad_integral  msad_thresh")
+        println(algorithm.files[c], "# t msad_euler msad_integral msad_thresh")
 
         # compute initial body frames
         R_all = get_all_body_frames(system)
