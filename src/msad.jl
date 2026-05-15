@@ -83,17 +83,18 @@ MSADState{T}() where {T} = MSADState{T}([], [], [], [], [], false)
 ##########                      ##########
 
 mutable struct MSADTracker{T} <: AriannaAlgorithm
-    states::Vector{MSADState{T}}    # the states of the considered chain
-    theta_T::T                      # threshold angle in radians
-    compute_schedule::Vector{Int}   # schedule for computing rotation for integral and threshold methods
-    output_schedule::Vector{Int}    # schedule for writing MSAD to disk 
-    path::Vector{String}           # paths to store files
-    files_integral::Vector{IOStream}    # file to write rotation vector in integral method
-    files_thresh::Vector{IOStream}   # file to write rotation vector in threshold method
+    states::Vector{MSADState{T}}
+    theta_T::T
+    compute_schedule::Vector{Int}
+    output_schedule::Vector{Int}
+    paths_integral::Vector{String}
+    paths_thresh::Vector{String}
+    files_integral::Vector{IOStream}
+    files_thresh::Vector{IOStream}
 end
 
 function MSADTracker(chains;
-                     theta_T::Float64,
+                     theta_T::Float64=π/4,
                      output_schedule::Vector{Int}=Int[],
                      path::String=".",
                      scheduler::Vector{Int}=Int[],
@@ -110,12 +111,16 @@ function MSADTracker(chains;
 
     n      = length(chains)
     states = [MSADState{Float64}() for _ in 1:n]
+    dirs   = [joinpath(path, "chains", "$c") for c in 1:n]
+
+    paths_integral = [joinpath(d, "phi_integral.dat") for d in dirs]
+    paths_thresh   = [joinpath(d, "phi_thresh.dat")   for d in dirs]
 
     files_integral = Vector{IOStream}(undef, n)
     files_thresh   = Vector{IOStream}(undef, n)
 
     return MSADTracker{Float64}(states, theta_T, compute_schedule,
-                                output_schedule, path,
+                                output_schedule, paths_integral, paths_thresh,
                                 files_integral, files_thresh)
 end
 
@@ -124,13 +129,13 @@ end
 
 function write_phi_frame(file::IOStream, t::Int, N_mol::Int,
                          phis::Vector{<:SVector})
+    println(file, N_mol)
     println(file, "t=$t")
     for m in 1:N_mol
         println(file, "$m $(phis[m][1]) $(phis[m][2]) $(phis[m][3])")
     end
     flush(file)
 end
-
 
 ##### Initialisation of the simulation #####
 # called once at t = 0, set the system, the mutable struct and the storing paths 
@@ -141,21 +146,20 @@ function Arianna.initialise(algorithm::MSADTracker, simulation::Simulation)
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
         state  = algorithm.states[c]
-        T      = typeof(system.temperature)   # get the float type from system so one can choose Float64 or 32 (generic)
+        T      = typeof(system.temperature)
 
         # create output directory if it doesn't exist
-        dir = joinpath(algrithm.path, "chains", "$c")
-        mkpath(dir)
+        mkpath(dirname(algorithm.paths_integral[c]))
 
-        # open output file — write header
-        algorithm.files_integral[c] = open(joinpath(dir, "phi_integral.dat"), "w")
-        algorithm.files_thresh[c] = open(joinpath(dir, "phi_thresh.dat"), "w")
+        # open output files
+        algorithm.files_integral[c] = open(algorithm.paths_integral[c], "w")
+        algorithm.files_thresh[c]   = open(algorithm.paths_thresh[c],   "w")
 
         # compute initial body frames
         R_all = get_all_body_frames(system)
         N_mol = system.Nmol
 
-        # fill state, copy. so they are different pointers!
+        # fill state
         state.R0           = copy(R_all)
         state.R_prev       = copy(R_all)
         state.phi_integral = [zero(SVector{3,T}) for _ in 1:N_mol]
@@ -163,14 +167,15 @@ function Arianna.initialise(algorithm::MSADTracker, simulation::Simulation)
         state.phi_acc      = [zero(SVector{3,T}) for _ in 1:N_mol]
         state.initialized  = true
 
-        # write t=0, all phi vectors
-        write_phi_frame(algorithm.files_integral[c],0,N_mol,state.phi_integral)
-        write_phi_frame(algorithm.files_thres[c],0,N_mol,state.phi_thresh)
+        # write t=0, all phi vectors are zero
+        write_phi_frame(algorithm.files_integral[c], 0, N_mol,
+                        state.phi_integral)
+        write_phi_frame(algorithm.files_thresh[c],   0, N_mol,
+                        [zero(SVector{3,T}) for _ in 1:N_mol])
     end
-
 end
 
-##### Finalise th simulation #####
+##### Finalise the simulation #####
 # close output to not keep unwritten data in memory
 ##########              ##########
 
@@ -180,7 +185,6 @@ function Arianna.finalise(tracker::MSADTracker, ::Simulation)
         close(tracker.files_thresh[c])
     end
 end
-
 ##### Make a step in simulation #####
 ##########                 ##########
 
