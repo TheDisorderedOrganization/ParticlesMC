@@ -40,13 +40,27 @@ function get_all_body_frames(system::Molecules)
 end
 
 function rotation_vector(R::SMatrix{3,3,T}) where {T}
+    
     cos_θ = clamp((tr(R) - 1) / 2, -one(T), one(T))
-    # skew-symmetric part encodes sin(θ)*n
-    skew  = (R - R') / 2
-    sin_n = SVector(skew[3,2], skew[1,3], skew[2,1]) # julia starts index at 1
-    sin_θ = norm(sin_n)
+
+    vals, vecs = eigen(R) # eigenvalues and eigenvectors of R
+    idx = argmin(abs.(real.(vals) .- 1)) # find the idx corresponding to eigenvalue = 1
+    n = real.(vecs[:, idx]) # extract the rotation axis vector
+    n = SVector{3,T}(n[1], n[2], n[3])
+
+    n_skew = SMatrix{3,3,T}(
+         0,    n[3], -n[2],
+        -n[3],  0,    n[1],
+         n[2], -n[1],  0
+    ) # skew matrix for n vector
+
+    # Rodrigues formula
+    sin_θ = clamp(-tr(n_skew * R) / 2, -one(T), one(T))
+
+    # theta 
     θ     = atan(sin_θ, cos_θ)
-    return sin_θ > 1e-10 ? (θ / sin_θ) * sin_n : zero(SVector{3,T}) ## might need to add the theta = pi case (unprobable for MC steps)
+
+    return θ * n
 end
 
 ##### Definition of the MSAD State ie: the accumulating variables #####
