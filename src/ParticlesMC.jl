@@ -291,17 +291,19 @@ ParticlesMC implemented in Comonicon.
             parameters = get(output, "parameters", Dict())
             theta_T = Float64(get(parameters, "theta_T", π/4))
 
-            # build output schedule separately from compute schedule
-            output_scheduler_params = get(output, "output_scheduler_params", Dict())
-            if "log_base" in keys(output_scheduler_params)
-                output_sched = build_schedule(steps, burn, 2.0)
-            elseif "linear_interval" in keys(output_scheduler_params)
-                output_sched = build_schedule(steps, burn, 
-                                output_scheduler_params["linear_interval"])
-            else
-                output_sched = sched  # default: same as compute
-            end
+            # build output scheduler from scheduler_params for consistency
+            output_sched = sched
 
+            # build compute schedule separately
+            compute_scheduler_params = get(output, "compute_scheduler_params", Dict())
+            if "log_base" in keys(compute_scheduler_params)
+                compute_sched = build_schedule(steps, burn, Float64(compute_scheduler_params["log_base"]))
+            elseif "linear_interval" in keys(compute_scheduler_params)
+                compute_sched = build_schedule(steps, burn, compute_scheduler_params["linear_interval"])
+            else
+                compute_sched = build_schedule(steps, burn, 1)  # every step by default
+            end
+            
             # convert to Vector{Int} — build_schedule returns this already
             algorithm = (
                 algorithm=MSADTracker,
