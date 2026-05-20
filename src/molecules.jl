@@ -23,6 +23,7 @@ Fields
 """
 struct Molecules{D,  VS<:AbstractVector, C<:NeighbourList, T<:AbstractFloat, SM<:AbstractArray} <: Particles
     position::Vector{SVector{D,T}}
+    phi::Vector{Vector{SVector{3,T}}}   # phi[k][m] = rotation vector for molecule m, threshold k
     species::VS
     molecule::VS
     molecule_species::VS
@@ -76,6 +77,7 @@ Returns
 function System(position, species, molecule, density::T, temperature::T, model_matrix, bonds; molecule_species=nothing, list_type=EmptyList, list_parameters=nothing) where {T<:AbstractFloat}
     @assert length(position) == length(species)
     N = length(position)
+    phi = Vector{Vector{SVector{3,T}}}()   # empty, filled by ComputeRotation
     Nmol = length(unique(molecule))
     start_mol, length_mol = get_first_and_counts(molecule)
     molecule_species = something(molecule_species, ones(Int, N))
@@ -84,7 +86,7 @@ function System(position, species, molecule, density::T, temperature::T, model_m
     energy = zeros(T, 1)
     maxcut = maximum([model.rcut for model in model_matrix])
     neighbour_list = list_type(box, maxcut, N; list_parameters=list_parameters)
-    system = Molecules(position, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, neighbour_list, bonds)
+    system = Molecules(position, phi, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, neighbour_list, bonds)
     build_neighbour_list!(system)
     local_energy = [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
     energy = sum(local_energy) / 2
