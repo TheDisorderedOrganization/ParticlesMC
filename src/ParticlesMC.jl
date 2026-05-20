@@ -312,7 +312,7 @@ ParticlesMC implemented in Comonicon.
             # convert to Vector{Int} — build_schedule returns this already
             algorithm = (
                 algorithm=MSADTracker,
-                scheduler=sched,           # compute schedule
+                scheduler=compute_sched,           # compute schedule
                 theta_T=theta_T,
                 output_schedule=output_sched,
                 path=output_path,
