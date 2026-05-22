@@ -177,7 +177,8 @@ ParticlesMC implemented in Comonicon.
             "list_type" => list_type,
             "list_parameters" => list_parameters,
             "bonds" => bonds,
-        ),filename=filename
+        ),
+        filename=filename,
         )
     else
         chains = load_chains(config, args=Dict(
@@ -186,7 +187,8 @@ ParticlesMC implemented in Comonicon.
             "model" => model,
             "list_type" => list_type,
             "list_parameters" => list_parameters,
-        ),filename=filename
+        ),
+        filename=filename,
         )
     end
     algorithm_list = []
