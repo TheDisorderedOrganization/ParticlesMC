@@ -127,33 +127,25 @@ end
 ##########                 ##########
 
 function Arianna.make_step!(simulation::Simulation, algorithm::ComputeRotation)
-    t = simulation.t
-
-    for c in eachindex(simulation.chains)
+    
+    collect(eachindex(simulation.chains) |> Map(c -> begin
         system = simulation.chains[c]
         state  = algorithm.states[c]
         N_mol  = system.Nmol
-        n_θ    = length(algorithm.theta_T)
-
-        # compute current body frames
-        R_all = get_all_body_frames(system)
-
-        for (k,θ_T) in enumerate(algorithm.theta_T) # iterate over each θ values
-
-            for m in 1:N_mol # for all molecule
-                dR          = state.R_ref[k][m]' * R_all[m]     # relative rotation for mol m with respect to ref k
-                phi_current = rotation_vector(dR)               # associated rotation vector
-                phi_total   = state.phi_acc[k][m] + phi_current # accumulated rotation vector since last threshold passing 
-
-                if norm(phi_current) > θ_T                  # tcheck if threshold is passed
-                    state.phi_acc[k][m]   = phi_total           # change the accumulation tcheck point
-                    state.R_ref[k][m] = R_all[m]                   # update the ref for m and k
+        R_all  = get_all_body_frames(system)
+        for (k, θ_T) in enumerate(algorithm.theta_T)
+            for m in 1:N_mol
+                dR          = state.R_ref[k][m]' * R_all[m]
+                phi_current = rotation_vector(dR)
+                phi_total   = state.phi_acc[k][m] + phi_current
+                if norm(phi_current) > θ_T
+                    state.phi_acc[k][m] = phi_total
+                    state.R_ref[k][m]   = R_all[m]
                 end
-
-                system.phi[k][m] = phi_total                    # update the phi state at each step for continuous time update
+                system.phi[k][m] = phi_total
             end
         end
-    end
+    end))
 end
 
 function Arianna.finalise(::ComputeRotation, ::Simulation) end
