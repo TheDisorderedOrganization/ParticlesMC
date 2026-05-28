@@ -114,9 +114,15 @@ function Arianna.initialise(algorithm::ComputeRotation, simulation::Simulation)
         state.Φ_acc      = [[zero(SVector{3,T}) for _ in 1:N_mol] for _ in 1:n_θ]
         state.initialized  = true
         
+<<<<<<< HEAD
         resize!(system.Φ, n_θ) # a posteriori as we know n_θ
         for k in 1:n_θ
             system.Φ[k] = [zero(SVector{3,T}) for _ in 1:N_mol]
+=======
+        resize!(system.phi, n_θ) # a posteriori as we know n_θ
+        for k in 1:n_θ
+            system.phi[k] = [zero(SVector{3,T}) for _ in 1:N_mol]
+>>>>>>> 366591a (initialise system.phi)
         end
     end
 end
