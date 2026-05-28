@@ -6,7 +6,7 @@ Exports commonly-used types (e.g., `Particles`, `Model`) and helper functions fo
 """
 module ParticlesMC
 
-using Arianna, StaticArrays
+using Arianna, StaticArrays, Transducers
 using Comonicon, TOML
 using Comonicon: @main
 
