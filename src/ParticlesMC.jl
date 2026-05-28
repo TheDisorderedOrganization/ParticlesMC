@@ -20,6 +20,7 @@ include("models.jl")
 include("molecules.jl")
 include("atoms.jl")
 include("moves.jl")
+include("rotation.jl")
 
 """Return the position of particle `i` in `system`.
 
@@ -245,6 +246,31 @@ ParticlesMC implemented in Comonicon.
     end
     push!(algorithm_list, (algorithm=Metropolis, pool=pool, seed=seed, parallel=parallel, sweepstep=length(chains[1])))
 
+    # Setup observables
+    for observable in get(sim, "observable", [])
+        alg = observable["algorithm"]
+        scheduler_params = observable["scheduler_params"]
+        interval = get(scheduler_params, "linear_interval", 1)
+        if "log_base" in keys(scheduler_params)
+            block = build_schedule(interval, 0, 2.0)
+            sched = build_schedule(steps, burn, block)
+        else
+            sched = build_schedule(steps, burn, interval)
+        end
+        if alg == "ComputeRotation"
+            parameters = get(observable, "parameters", Dict())
+            theta_T    = Float64.(get(parameters, "theta_T", [π/4]))
+            algorithm  = (
+                algorithm=ComputeRotation,
+                scheduler=sched,
+                theta_T=theta_T,
+            )
+        else
+            error("Unsupported observable algorithm: $alg")
+        end
+        push!(algorithm_list, algorithm)
+    end
+
     # Setup outputs
     for output in sim["output"]
         alg = output["algorithm"]
@@ -278,6 +304,12 @@ ParticlesMC implemented in Comonicon.
                 algorithm=eval(Meta.parse(alg)),
                 scheduler=sched,
                 fmt=eval(Meta.parse("$(fmt)()")),
+            )
+        elseif alg == "StorePhiTrajectories"
+            algorithm = (
+                algorithm=StorePhiTrajectories,
+                scheduler=sched,
+                path=output_path,
             )
         elseif alg == "PrintTimeSteps"
             algorithm = (
