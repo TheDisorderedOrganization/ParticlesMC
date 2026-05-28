@@ -198,7 +198,7 @@ function Arianna.initialise(algorithm::StorePhiTrajectories, simulation::Simulat
                                for k in 1:n_θ]
         algorithm.files[c] = open.(algorithm.paths[c], "w")
     end
-    algorithm.store_first && make_step!(simulation, algorithm)
+    algorithm.store_first && Arianna.make_step!(simulation, algorithm)
 end
 
 function Arianna.make_step!(simulation::Simulation, algorithm::StorePhiTrajectories)
