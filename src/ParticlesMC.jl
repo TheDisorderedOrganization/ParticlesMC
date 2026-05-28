@@ -150,9 +150,10 @@ ParticlesMC implemented in Comonicon.
     if model === nothing
         model = params["model"]
     end  # optional field
-    if !isfile(config)
+    if !isfile(config) && !isdir(config)
         error("Configuration file '$config' does not exist in the current path.")
     end
+    filename = isdir(config) ? filename = system["filename"] : "" # if the config is a directory then one need to specify the root of the filenames in toml (include that in README?)
     list_type = get(system, "list_type", "LinkedList")  # optional field
     list_parameters = get(system, "list_parameters", nothing)  # optional field
     bonds = get(system, "bonds", nothing)
@@ -177,7 +178,9 @@ ParticlesMC implemented in Comonicon.
             "list_type" => list_type,
             "list_parameters" => list_parameters,
             "bonds" => bonds,
-        ))
+        ),
+        filename=filename,
+        )
     else
         chains = load_chains(config, args=Dict(
             "temperature" => temperature,
@@ -185,7 +188,9 @@ ParticlesMC implemented in Comonicon.
             "model" => model,
             "list_type" => list_type,
             "list_parameters" => list_parameters,
-        ))
+        ),
+        filename=filename,
+        )
     end
     algorithm_list = []
     # Setup moves
