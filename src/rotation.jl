@@ -3,7 +3,7 @@
 # Compute on-the-fly rotation tracker.
 # Two algorithms :
 # 1. ComputeRotation : updates system.Φ (simulation.observable)
-# 2. StoreΦTrajectory : writes system.Φ to disk
+# 2. StorePhiTrajectory : writes system.Φ to disk
 # system.Φ[k][m] = rotation vector for molecule m under theta_T[k]
 
 using LinearAlgebra
