@@ -310,15 +310,9 @@ ParticlesMC implemented in Comonicon.
                 scheduler=sched,
                 fmt=eval(Meta.parse("$(fmt)()")),
             )
-        elseif alg == "StoreLastPhiFrame"
+        elseif alg == "StorePhiTrajectories" || alg == "StoreLastPhiFrame"
             algorithm = (
-                algorithm=StoreLastPhiFrame,
-                scheduler=sched,
-                path=output_path,
-            )
-        elseif alg == "StorePhiTrajectories"
-            algorithm = (
-                algorithm=StorePhiTrajectories,
+                algorithm=eval(Meta.parse(alg)),
                 scheduler=sched,
                 path=output_path,
             )
