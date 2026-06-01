@@ -151,7 +151,12 @@ function Arianna.finalise(::ComputeRotation, ::Simulation) end
 ##### Store rotation vector trajectory #####
 ##########                        ##########
 
+<<<<<<< HEAD
 function write_phi_frame(file::IOStream, t::Int, N_mol::Int, Φs::Vector{<:SVector})
+=======
+function write_phi_frame(file::IOStream, t::Int, N_mol::Int,
+                         Φs::Vector{<:SVector})
+>>>>>>> 1261e92 (changed variables 'phi' to 'Φ')
     println(file, N_mol)
     println(file, "t=$t")
     for m in 1:N_mol
@@ -186,7 +191,11 @@ function Arianna.initialise(algorithm::StorePhiTrajectories, simulation::Simulat
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
         n_θ    = length(system.Φ)
+<<<<<<< HEAD
         algorithm.paths[c] = [joinpath(algorithm.dirs[c], "phitrajectories_$k.dat")
+=======
+        algorithm.paths[c] = [joinpath(algorithm.dirs[c], "Φtrajectories_$k.dat")
+>>>>>>> 1261e92 (changed variables 'phi' to 'Φ')
                                for k in 1:n_θ]
         algorithm.files[c] = open.(algorithm.paths[c], "w")
     end
