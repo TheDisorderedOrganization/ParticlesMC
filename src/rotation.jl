@@ -2,9 +2,9 @@
 #
 # Compute on-the-fly rotation tracker.
 # Two algorithms :
-# 1. ComputeRotation : updates system.phi (simulation.observable)
-# 2. StorePhiTrajectory : writes system.phi to disk
-# system.phi[k][m] = rotation vector for molecule m under theta_T[k]
+# 1. ComputeRotation : updates system.Φ (simulation.observable)
+# 2. StoreΦTrajectory : writes system.Φ to disk
+# system.Φ[k][m] = rotation vector for molecule m under theta_T[k]
 
 using LinearAlgebra
 using StaticArrays
@@ -70,7 +70,7 @@ end
 mutable struct RotationState{T}
     R0::Vector{SMatrix{3,3,T,9}}
     R_ref::Vector{Vector{SMatrix{3,3,T,9}}}   
-    phi_acc::Vector{Vector{SVector{3,T}}}       
+    Φ_acc::Vector{Vector{SVector{3,T}}}       
     initialized::Bool
 end
 
@@ -113,12 +113,12 @@ function Arianna.initialise(algorithm::ComputeRotation, simulation::Simulation)
         # fill state
         state.R0           = copy(R_all)
         state.R_ref        = [copy(R_all) for _ in 1:n_θ]
-        state.phi_acc      = [[zero(SVector{3,T}) for _ in 1:N_mol] for _ in 1:n_θ]
+        state.Φ_acc      = [[zero(SVector{3,T}) for _ in 1:N_mol] for _ in 1:n_θ]
         state.initialized  = true
         
-        resize!(system.phi, n_θ) # a posteriori as we know n_θ
+        resize!(system.Φ, n_θ) # a posteriori as we know n_θ
         for k in 1:n_θ
-            system.phi[k] = [zero(SVector{3,T}) for _ in 1:N_mol]
+            system.Φ[k] = [zero(SVector{3,T}) for _ in 1:N_mol]
         end
     end
 end
@@ -136,13 +136,13 @@ function Arianna.make_step!(simulation::Simulation, algorithm::ComputeRotation)
         for (k, θ_T) in enumerate(algorithm.theta_T)
             for m in 1:N_mol
                 dR          = state.R_ref[k][m]' * R_all[m]
-                phi_current = rotation_vector(dR)
-                phi_total   = state.phi_acc[k][m] + phi_current
-                if norm(phi_current) > θ_T
-                    state.phi_acc[k][m] = phi_total
+                Φ_current = rotation_vector(dR)
+                Φ_total   = state.Φ_acc[k][m] + Φ_current
+                if norm(Φ_current) > θ_T
+                    state.Φ_acc[k][m] = Φ_total
                     state.R_ref[k][m]   = R_all[m]
                 end
-                system.phi[k][m] = phi_total
+                system.Φ[k][m] = Φ_total
             end
         end
     end))
@@ -154,11 +154,11 @@ function Arianna.finalise(::ComputeRotation, ::Simulation) end
 ##########                        ##########
 
 function write_phi_frame(file::IOStream, t::Int, N_mol::Int,
-                         phis::Vector{<:SVector})
+                         Φs::Vector{<:SVector})
     println(file, N_mol)
     println(file, "t=$t")
     for m in 1:N_mol
-        println(file, "$m $(phis[m][1]) $(phis[m][2]) $(phis[m][3])")
+        println(file, "$m $(Φs[m][1]) $(Φs[m][2]) $(Φs[m][3])")
     end
     flush(file)
 end
@@ -185,11 +185,11 @@ function StorePhiTrajectories(chains; path=missing, store_first=true, store_last
 end
 
 function Arianna.initialise(algorithm::StorePhiTrajectories, simulation::Simulation)
-    simulation.verbose && println("Opening phi trajectory files...")
+    simulation.verbose && println("Opening Φ trajectory files...")
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
-        n_θ    = length(system.phi)
-        algorithm.paths[c] = [joinpath(algorithm.dirs[c], "phitrajectories_$k.dat")
+        n_θ    = length(system.Φ)
+        algorithm.paths[c] = [joinpath(algorithm.dirs[c], "Φtrajectories_$k.dat")
                                for k in 1:n_θ]
         algorithm.files[c] = open.(algorithm.paths[c], "w")
     end
@@ -199,17 +199,17 @@ end
 function Arianna.make_step!(simulation::Simulation, algorithm::StorePhiTrajectories)
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
-        n_θ    = length(system.phi)
+        n_θ    = length(system.Φ)
         N_mol  = system.Nmol
         for k in 1:n_θ
-            write_phi_frame(algorithm.files[c][k], simulation.t, N_mol, system.phi[k])
+            write_phi_frame(algorithm.files[c][k], simulation.t, N_mol, system.Φ[k])
         end
     end
 end
 
 function Arianna.finalise(algorithm::StorePhiTrajectories, simulation::Simulation)
     algorithm.store_last && make_step!(simulation, algorithm)
-    simulation.verbose && println("Closing phi trajectory files...")
+    simulation.verbose && println("Closing Φ trajectory files...")
     for files_c in algorithm.files
         close.(files_c)
     end
