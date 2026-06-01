@@ -68,7 +68,6 @@ end
 ##########                                                   ##########
 
 mutable struct RotationState{T}
-    R0::Vector{SMatrix{3,3,T,9}}
     R_ref::Vector{Vector{SMatrix{3,3,T,9}}}   
     Φ_acc::Vector{Vector{SVector{3,T}}}       
     initialized::Bool
@@ -111,7 +110,6 @@ function Arianna.initialise(algorithm::ComputeRotation, simulation::Simulation)
         R_all = get_all_body_frames(system)
 
         # fill state
-        state.R0           = copy(R_all)
         state.R_ref        = [copy(R_all) for _ in 1:n_θ]
         state.Φ_acc      = [[zero(SVector{3,T}) for _ in 1:N_mol] for _ in 1:n_θ]
         state.initialized  = true
@@ -213,4 +211,69 @@ function Arianna.finalise(algorithm::StorePhiTrajectories, simulation::Simulatio
     for files_c in algorithm.files
         close.(files_c)
     end
+end
+
+##### Store last Φ frame for checkpoint/restart #####
+##########                                    ##########
+
+struct StoreLastPhiFrame <: AriannaAlgorithm
+    paths::Vector{String}   # one per chain: chains/c/rotation_checkpoint.dat
+
+    function StoreLastPhiFrame(chains, path; kwargs...)
+        dirs  = joinpath.(path, "chains", ["$(c)" for c in eachindex(chains)])
+        mkpath.(dirs)
+        paths = joinpath.(dirs, "rotation_checkpoint.dat")
+        return new(paths)
+    end
+end
+
+function StoreLastPhiFrame(chains; path=missing, kwargs...)
+    return StoreLastPhiFrame(chains, path)
+end
+
+function Arianna.finalise(algorithm::StoreLastPhiFrame, simulation::Simulation)
+    # find ComputeRotation in simulation algorithms to access internal state
+    compute_rot = nothing
+    for algo in simulation.algorithms
+        if algo isa ComputeRotation
+            compute_rot = algo
+            break
+        end
+    end
+    @assert compute_rot !== nothing "StoreLastPhiFrame requires ComputeRotation in algorithm list"
+
+    for c in eachindex(simulation.chains)
+        system = simulation.chains[c]
+        state  = compute_rot.states[c]
+        N_mol  = system.Nmol
+        n_θ    = length(compute_rot.theta_T)
+
+        open(algorithm.paths[c], "w") do file
+            # header
+            println(file, "t=$(simulation.t)")
+            println(file, "N_mol=$N_mol")
+            println(file, "n_theta=$n_θ")
+            println(file, "theta_T=$(join(compute_rot.theta_T, ','))")
+
+            # R_ref and Φ_acc
+            for k in 1:n_θ
+                println(file, "# R_ref k=$k")
+                for m in 1:N_mol
+                    r = state.R_ref[k][m]
+                    println(file, "$m $(r[1,1]) $(r[2,1]) $(r[3,1]) $(r[1,2]) $(r[2,2]) $(r[3,2]) $(r[1,3]) $(r[2,3]) $(r[3,3])")
+                end
+                println(file, "# Φ_acc k=$k")
+                for m in 1:N_mol
+                    p = state.Φ_acc[k][m]
+                    println(file, "$m $(p[1]) $(p[2]) $(p[3])")
+                end
+                println(file, "# Φ k=$k")
+                for m in 1:N_mol
+                    p = system.Φ[k][m]
+                    println(file, "$m $(p[1]) $(p[2]) $(p[3])")
+                end
+            end
+        end
+    end
+    return nothing
 end
