@@ -126,6 +126,7 @@ export perform_action!, revert_action!
 include("IO/IO.jl")
 using .IO: XYZ, EXYZ, LAMMPS, load_configuration, load_chains
 export XYZ, EXYZ, LAMMPS, load_configuration, load_chains
+export ComputeRotation, StorePhiTrajectories, StoreLastPhiFrame
 
 
 """

@@ -191,3 +191,48 @@ end
     @test isapprox(energy_el, energy_ll, atol=1e-6)
 
 end
+
+@testset "molecules rotation test" begin
+    chains = load_chains("molecule.exyz", args=Dict("temperature" => [2.0], "model" => ["Trimer"], "list_type" => "LinkedList"))
+    system = chains[1]
+    steps = 128
+    burn  = 0
+    theta_T = [0.0, π/4, π]
+    sampletimes = build_schedule(steps, burn, 2.0)
+    displacement_policy     = SimpleGaussian()
+    displacement_parameters = ComponentArray(σ=0.05)
+    pool = (Move(Displacement(0, zero(system.box), 0.0), displacement_policy, displacement_parameters, 1.0),)
+    algorithm_list = (
+        (algorithm=Metropolis, pool=pool, seed=10, parallel=false, sweepstep=system.N),
+        (algorithm=ComputeRotation, scheduler=build_schedule(steps, burn, 1), theta_T=theta_T),
+        (algorithm=StorePhiTrajectories, scheduler=sampletimes, path="data/rotation/"),
+        (algorithm=StoreLastPhiFrame, scheduler=[steps], path="data/rotation/"),
+    )
+    chains = [deepcopy(system)]
+    simulation = Simulation(chains, algorithm_list, steps; path="data/rotation/", verbose=true)
+    run!(simulation)
+    println("OK")
+end
+
+@testset "molecules rotation test" begin
+    chains = load_chains("molecule.exyz", args=Dict("temperature" => [2.0], "model" => ["Trimer"], "list_type" => "LinkedList"))
+    system = chains[1]
+    steps = 128
+    burn  = 0
+    theta_T = [0.0, π/4, π]
+    sampletimes = build_schedule(steps, burn, 2.0)
+    displacement_policy     = SimpleGaussian()
+    displacement_parameters = ComponentArray(σ=0.05)
+    pool = (Move(Displacement(0, zero(system.box), 0.0), displacement_policy, displacement_parameters, 1.0),)
+    algorithm_list = (
+        (algorithm=Metropolis, pool=pool, seed=10, parallel=false, sweepstep=system.N),
+        (algorithm=ComputeRotation, scheduler=build_schedule(steps, burn, 1), theta_T=theta_T),
+        (algorithm=StorePhiTrajectories, scheduler=sampletimes, path="data/rotation/"),
+        (algorithm=StoreLastPhiFrame, scheduler=[steps], path="data/rotation/"),
+    )
+    chains = [deepcopy(system)]
+    simulation = Simulation(chains, algorithm_list, steps; path="data/rotation/", verbose=true)
+    run!(simulation)
+    println("OK")
+end
+

@@ -74,7 +74,7 @@ mutable struct RotationState{T}
 end
 
 # Start empty, filled during initialise when we first see the system
-RotationState{T}() where {T} = RotationState{T}([], [], [], false)
+RotationState{T}() where {T} = RotationState{T}([], [], false)
 
 ##### The Rotation computation algorithm #####
 ##########                      ##########
