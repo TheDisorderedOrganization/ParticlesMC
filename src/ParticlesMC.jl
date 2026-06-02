@@ -117,10 +117,10 @@ end
 """
 
 function build_sched(scheduler_params, steps, burn)
-    if haskey(scheduler_params, "tmax") && haskey(scheduler_params, "tw") && haskey(scheduler_params, "N")
-        tmax = scheduler_params["tmax"]
-        tw   = scheduler_params["tw"]
-        N    = scheduler_params["N"]
+    if haskey(scheduler_params, "multi_origins")
+        tmax = scheduler_params["multi_origins"]["tmax"]
+        tw   = scheduler_params["multi_origins"]["tw"]
+        N    = scheduler_params["multi_origins"]["N"]
         return build_schedule(tmax, MultiOrigins(tw, N), burn=burn)
     elseif haskey(scheduler_params, "log_base")
         interval = get(scheduler_params, "linear_interval", 1)
