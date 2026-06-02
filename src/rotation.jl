@@ -151,8 +151,7 @@ function Arianna.finalise(::ComputeRotation, ::Simulation) end
 ##### Store rotation vector trajectory #####
 ##########                        ##########
 
-function write_phi_frame(file::IOStream, t::Int, N_mol::Int,
-                         Φs::Vector{<:SVector})
+function write_phi_frame(file::IOStream, t::Int, N_mol::Int, Φs::Vector{<:SVector})
     println(file, N_mol)
     println(file, "t=$t")
     for m in 1:N_mol
@@ -187,7 +186,7 @@ function Arianna.initialise(algorithm::StorePhiTrajectories, simulation::Simulat
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
         n_θ    = length(system.Φ)
-        algorithm.paths[c] = [joinpath(algorithm.dirs[c], "Φtrajectories_$k.dat")
+        algorithm.paths[c] = [joinpath(algorithm.dirs[c], "phitrajectories_$k.dat")
                                for k in 1:n_θ]
         algorithm.files[c] = open.(algorithm.paths[c], "w")
     end
@@ -222,7 +221,7 @@ struct StoreLastPhiFrame <: AriannaAlgorithm
     function StoreLastPhiFrame(chains, path; kwargs...)
         dirs  = joinpath.(path, "chains", ["$(c)" for c in eachindex(chains)])
         mkpath.(dirs)
-        paths = joinpath.(dirs, "rotation_checkpoint.dat")
+        paths = joinpath.(dirs, "lastphiframe.dat")
         return new(paths)
     end
 end
