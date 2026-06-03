@@ -126,7 +126,7 @@ end
 
 function Arianna.make_step!(simulation::Simulation, algorithm::ComputeRotation)
 
-    collect(eachindex(simulation.chains) |> Transducers.Map(c -> begin
+    tcollect(eachindex(simulation.chains) |> Transducers.Map(c -> begin
         system = simulation.chains[c]
         state  = algorithm.states[c]
         N_mol  = system.Nmol
