@@ -116,7 +116,7 @@ end
     Helper for building scheduler based on TOML schedul parameters
 """
 
-function build_sched(scheduler_params, steps, burn)
+function parse_schedule(scheduler_params, steps, burn)
     if haskey(scheduler_params, "multi_origins")
         tmax = scheduler_params["multi_origins"]["tmax"]
         tw   = scheduler_params["multi_origins"]["tw"]
