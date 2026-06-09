@@ -274,7 +274,7 @@ ParticlesMC implemented in Comonicon.
     for observable in get(sim, "observable", [])
         alg = observable["algorithm"]
         scheduler_params = observable["scheduler_params"]
-        sched = build_sched(scheduler_params, steps, burn)
+        sched = parse_schedule(scheduler_params, steps, burn)
         if alg == "ComputeRotation"
             parameters = get(observable, "parameters", Dict())
             theta_T    = Float64.(get(parameters, "theta_T", [π/4]))
@@ -296,7 +296,7 @@ ParticlesMC implemented in Comonicon.
         dependencies = get(output, "dependencies", nothing)
         callbacks = get(output, "callbacks", [])
         fmt = get(output, "fmt", "XYZ")
-        sched = build_sched(scheduler_params, steps, burn)
+        sched = parse_schedule(scheduler_params, steps, burn)
         if alg == "StoreCallbacks"
             callbacks = map(c -> eval(Meta.parse("$c")), callbacks)
             algorithm = (
