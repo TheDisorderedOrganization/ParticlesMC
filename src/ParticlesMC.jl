@@ -118,10 +118,9 @@ end
 
 function parse_schedule(scheduler_params, steps, burn)
     if haskey(scheduler_params, "multi_origins")
-        tmax = scheduler_params["multi_origins"]["tmax"]
         tw   = scheduler_params["multi_origins"]["tw"]
         N    = scheduler_params["multi_origins"]["N"]
-        return build_schedule(tmax, MultiOrigins(tw, N), burn=burn)
+        return build_schedule(steps, MultiOrigins(tw, N), burn=burn)
     elseif haskey(scheduler_params, "log_base")
         interval = get(scheduler_params, "linear_interval", 1)
         block    = build_schedule(interval, 0, 2.0)
