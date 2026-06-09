@@ -27,40 +27,60 @@ function body_frame(r1::SVector{3,T}, r2::SVector{3,T}, r3::SVector{3,T}, L::T) 
     return hcat(e1, e2, e3)   # SMatrix{3,3,T}
 end
 
-function get_all_body_frames(system::Molecules)
-    L   = system.box[1]                                    # cubic box
-    T   = typeof(L)
-    R   = Vector{SMatrix{3,3,T,9}}(undef, system.Nmol)    # pre-allocate
+function get_all_body_frames!(R_bodyframe, system::Molecules)
+    L   = system.box[1]
     pos = system.position
-    @inbounds for m in 1:system.Nmol                    # iterate over the number of molecules
-        s    = system.start_mol[m]                         # first bead index for the considered molecule
-        R[m] = body_frame(pos[s], pos[s+1], pos[s+2], L)
+    @inbounds for m in 1:system.Nmol
+        s        = system.start_mol[m]
+        R_bodyframe[m] = body_frame(pos[s], pos[s+1], pos[s+2], L)
     end
-    return R
 end
 
+# function rotation_vector(R::SMatrix{3,3,T}) where {T}
+
+#     cos_θ = clamp((tr(R) - 1) / 2, -one(T), one(T))
+
+#     vals, vecs = eigen(R) # eigenvalues and eigenvectors of R
+#     idx = argmin(abs.(real.(vals) .- 1)) # find the idx corresponding to eigenvalue = 1
+#     n = real.(vecs[:, idx]) # extract the rotation axis vector
+#     n = SVector{3,T}(n[1], n[2], n[3])
+
+#     n_skew = SMatrix{3,3,T}(
+#          0,    n[3], -n[2],
+#         -n[3],  0,    n[1],
+#          n[2], -n[1],  0
+#     ) # skew matrix for n vector
+
+#     # Rodrigues formula
+#     sin_θ = clamp(-tr(n_skew * R) / 2, -one(T), one(T))
+
+#     # theta 
+#     θ     = atan(sin_θ, cos_θ)
+
+#     return θ * n
+# end
+
 function rotation_vector(R::SMatrix{3,3,T}) where {T}
-
     cos_θ = clamp((tr(R) - 1) / 2, -one(T), one(T))
+    θ = acos(cos_θ)
 
-    vals, vecs = eigen(R) # eigenvalues and eigenvectors of R
-    idx = argmin(abs.(real.(vals) .- 1)) # find the idx corresponding to eigenvalue = 1
-    n = real.(vecs[:, idx]) # extract the rotation axis vector
-    n = SVector{3,T}(n[1], n[2], n[3])
+    ax = R[3,2] - R[2,3]
+    ay = R[1,3] - R[3,1]
+    az = R[2,1] - R[1,2]
+    sin_θ = sqrt(ax^2 + ay^2 + az^2) / 2
 
-    n_skew = SMatrix{3,3,T}(
-         0,    n[3], -n[2],
-        -n[3],  0,    n[1],
-         n[2], -n[1],  0
-    ) # skew matrix for n vector
-
-    # Rodrigues formula
-    sin_θ = clamp(-tr(n_skew * R) / 2, -one(T), one(T))
-
-    # theta 
-    θ     = atan(sin_θ, cos_θ)
-
-    return θ * n
+    if θ < sqrt(eps(T))              # θ ≈ 0
+        return zero(SVector{3,T})
+    elseif π - θ < sqrt(eps(T))     # θ ≈ π
+        nx = sqrt(max((R[1,1] + 1) / 2, zero(T)))
+        ny = sqrt(max((R[2,2] + 1) / 2, zero(T)))
+        nz = sqrt(max((R[3,3] + 1) / 2, zero(T)))
+        n = SVector{3,T}(nx, ny, nz)
+        return θ * n / norm(n)
+    else                             # general case — zero allocs
+        inv_2s = θ / (2 * sin_θ)
+        return SVector{3,T}(ax * inv_2s, ay * inv_2s, az * inv_2s)
+    end
 end
 
 ##### Definition of the RotationState ie: the accumulating variables #####
@@ -68,13 +88,14 @@ end
 ##########                                                   ##########
 
 mutable struct RotationState{T}
-    R_ref::Vector{Vector{SMatrix{3,3,T,9}}}   
+    R_ref::Vector{Vector{SMatrix{3,3,T,9}}} 
+    R_bodyframe::Vector{SMatrix{3,3,T,9}} 
     Φ_acc::Vector{Vector{SVector{3,T}}}       
     initialized::Bool
 end
 
 # Start empty, filled during initialise when we first see the system
-RotationState{T}() where {T} = RotationState{T}([], [], false)
+RotationState{T}() where {T} = RotationState{T}([], [], [], false)
 
 ##### The Rotation computation algorithm #####
 ##########                      ##########
@@ -98,7 +119,6 @@ end
 ##########                        ##########
 
 function Arianna.initialise(algorithm::ComputeRotation, simulation::Simulation)
-
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
         state  = algorithm.states[c]
@@ -106,15 +126,14 @@ function Arianna.initialise(algorithm::ComputeRotation, simulation::Simulation)
         N_mol  = system.Nmol
         n_θ    = length(algorithm.theta_T)
 
-        # compute initial body frames
-        R_all = get_all_body_frames(system)
+        state.R_bodyframe = Vector{SMatrix{3,3,T,9}}(undef, N_mol)  # allocate once
+        get_all_body_frames!(state.R_bodyframe, system)              # ← state.R_buf
 
-        # fill state
-        state.R_ref        = [copy(R_all) for _ in 1:n_θ]
-        state.Φ_acc      = [[zero(SVector{3,T}) for _ in 1:N_mol] for _ in 1:n_θ]
-        state.initialized  = true
-        
-        resize!(system.Φ, n_θ) # a posteriori as we know n_θ
+        state.R_ref       = [copy(state.R_bodyframe) for _ in 1:n_θ]
+        state.Φ_acc       = [[zero(SVector{3,T}) for _ in 1:N_mol] for _ in 1:n_θ]
+        state.initialized = true
+
+        resize!(system.Φ, n_θ)
         for k in 1:n_θ
             system.Φ[k] = [zero(SVector{3,T}) for _ in 1:N_mol]
         end
@@ -125,20 +144,19 @@ end
 ##########                 ##########
 
 function Arianna.make_step!(simulation::Simulation, algorithm::ComputeRotation)
-
     tcollect(eachindex(simulation.chains) |> Transducers.Map(c -> begin
         system = simulation.chains[c]
         state  = algorithm.states[c]
         N_mol  = system.Nmol
-        R_all  = get_all_body_frames(system)
+        get_all_body_frames!(state.R_bodyframe, system)   # ← in-place, no alloc                       # ← alias, no copy
         for (k, θ_T) in enumerate(algorithm.theta_T)
             for m in 1:N_mol
-                dR          = state.R_ref[k][m]' * R_all[m]
+                dR        = state.R_ref[k][m]' * state.R_bodyframe[m]
                 Φ_current = rotation_vector(dR)
                 Φ_total   = state.Φ_acc[k][m] + Φ_current
                 if norm(Φ_current) > θ_T
                     state.Φ_acc[k][m] = Φ_total
-                    state.R_ref[k][m]   = R_all[m]
+                    state.R_ref[k][m] = state.R_bodyframe[m]
                 end
                 system.Φ[k][m] = Φ_total
             end
