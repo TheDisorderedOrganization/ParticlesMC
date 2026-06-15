@@ -112,6 +112,24 @@ function compute_energy_particle(system::Particles, ids::AbstractVector)
     return map(i -> compute_energy_particle(system, i), ids)
 end
 
+"""
+    Helper for building scheduler based on TOML schedul parameters
+"""
+
+function parse_schedule(scheduler_params, steps, burn)
+    if haskey(scheduler_params, "multi_origins")
+        tw   = scheduler_params["multi_origins"]["tw"]
+        N    = scheduler_params["multi_origins"]["N"]
+        return build_schedule(steps, MultiOrigins(tw, N), burn=burn)
+    elseif haskey(scheduler_params, "log_base")
+        interval = get(scheduler_params, "linear_interval", 1)
+        block    = build_schedule(interval, 0, 2.0)
+        return build_schedule(steps, burn, block)
+    else
+        interval = get(scheduler_params, "linear_interval", 1)
+        return build_schedule(steps, burn, interval)
+    end
+end
 
 export energy
 #export nearest_image_distance
@@ -256,13 +274,7 @@ ParticlesMC implemented in Comonicon.
     for observable in get(sim, "observable", [])
         alg = observable["algorithm"]
         scheduler_params = observable["scheduler_params"]
-        interval = get(scheduler_params, "linear_interval", 1)
-        if "log_base" in keys(scheduler_params)
-            block = build_schedule(interval, 0, 2.0)
-            sched = build_schedule(steps, burn, block)
-        else
-            sched = build_schedule(steps, burn, interval)
-        end
+        sched = parse_schedule(scheduler_params, steps, burn)
         if alg == "ComputeRotation"
             parameters = get(observable, "parameters", Dict())
             theta_T    = Float64.(get(parameters, "theta_T", [π/4]))
@@ -284,13 +296,7 @@ ParticlesMC implemented in Comonicon.
         dependencies = get(output, "dependencies", nothing)
         callbacks = get(output, "callbacks", [])
         fmt = get(output, "fmt", "XYZ")
-        interval = scheduler_params["linear_interval"]
-        if "log_base" in keys(scheduler_params)
-            block = build_schedule(interval, 0, 2.0)
-            sched = build_schedule(steps, burn, block)
-        else
-            sched = build_schedule(steps, burn, interval)
-        end
+        sched = parse_schedule(scheduler_params, steps, burn)
         if alg == "StoreCallbacks"
             callbacks = map(c -> eval(Meta.parse("$c")), callbacks)
             algorithm = (

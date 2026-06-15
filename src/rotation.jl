@@ -3,7 +3,7 @@
 # Compute on-the-fly rotation tracker.
 # Two algorithms :
 # 1. ComputeRotation : updates system.Φ (simulation.observable)
-# 2. StoreΦTrajectory : writes system.Φ to disk
+# 2. StorePhiTrajectory : writes system.Φ to disk
 # system.Φ[k][m] = rotation vector for molecule m under theta_T[k]
 
 using LinearAlgebra
@@ -126,7 +126,7 @@ end
 
 function Arianna.make_step!(simulation::Simulation, algorithm::ComputeRotation)
 
-    collect(eachindex(simulation.chains) |> Transducers.Map(c -> begin
+    tcollect(eachindex(simulation.chains) |> Transducers.Map(c -> begin
         system = simulation.chains[c]
         state  = algorithm.states[c]
         N_mol  = system.Nmol
