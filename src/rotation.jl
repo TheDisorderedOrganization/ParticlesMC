@@ -36,30 +36,6 @@ function get_all_body_frames!(R_bodyframe, system::Molecules)
     end
 end
 
-# function rotation_vector(R::SMatrix{3,3,T}) where {T}
-
-#     cos_θ = clamp((tr(R) - 1) / 2, -one(T), one(T))
-
-#     vals, vecs = eigen(R) # eigenvalues and eigenvectors of R
-#     idx = argmin(abs.(real.(vals) .- 1)) # find the idx corresponding to eigenvalue = 1
-#     n = real.(vecs[:, idx]) # extract the rotation axis vector
-#     n = SVector{3,T}(n[1], n[2], n[3])
-
-#     n_skew = SMatrix{3,3,T}(
-#          0,    n[3], -n[2],
-#         -n[3],  0,    n[1],
-#          n[2], -n[1],  0
-#     ) # skew matrix for n vector
-
-#     # Rodrigues formula
-#     sin_θ = clamp(-tr(n_skew * R) / 2, -one(T), one(T))
-
-#     # theta 
-#     θ     = atan(sin_θ, cos_θ)
-
-#     return θ * n
-# end
-
 function rotation_vector(R::SMatrix{3,3,T}) where {T}
     cos_θ = clamp((tr(R) - 1) / 2, -one(T), one(T))
     θ = acos(cos_θ)
@@ -69,17 +45,27 @@ function rotation_vector(R::SMatrix{3,3,T}) where {T}
     az = R[2,1] - R[1,2]
     sin_θ = sqrt(ax^2 + ay^2 + az^2) / 2
 
-    if θ < sqrt(eps(T))              # θ ≈ 0
-        return zero(SVector{3,T})
-    elseif π - θ < sqrt(eps(T))     # θ ≈ π
-        nx = sqrt(max((R[1,1] + 1) / 2, zero(T)))
-        ny = sqrt(max((R[2,2] + 1) / 2, zero(T)))
-        nz = sqrt(max((R[3,3] + 1) / 2, zero(T)))
-        n = SVector{3,T}(nx, ny, nz)
-        return θ * n / norm(n)
-    else                             # general case — zero allocs
+    if sin_θ > sqrt(eps(T))              # guard sin_θ ≈ 0
+        θ      = atan(sin_θ, cos_θ)
         inv_2s = θ / (2 * sin_θ)
         return SVector{3,T}(ax * inv_2s, ay * inv_2s, az * inv_2s)
+    
+    elseif cos_θ > 0                     # guard θ ≈ 0, near identity
+        return zero(SVector{3,T})
+
+    else                                  # guard θ ≈ π
+        if R[1,1] >= R[2,2] && R[1,1] >= R[3,3]
+            nx = sqrt(max((R[1,1] + 1) / 2, zero(T)))
+            n  = SVector{3,T}(nx, (R[1,2] + R[2,1]) / (4nx), (R[1,3] + R[3,1]) / (4nx))
+        elseif R[2,2] >= R[3,3]
+            ny = sqrt(max((R[2,2] + 1) / 2, zero(T)))
+            n  = SVector{3,T}((R[1,2] + R[2,1]) / (4ny), ny, (R[2,3] + R[3,2]) / (4ny))
+        else
+            nz = sqrt(max((R[3,3] + 1) / 2, zero(T)))
+            n  = SVector{3,T}((R[1,3] + R[3,1]) / (4nz), (R[2,3] + R[3,2]) / (4nz), nz)
+        end
+        θ = atan(sin_θ, cos_θ)
+        return θ * n / norm(n)
     end
 end
 
@@ -175,7 +161,7 @@ function write_phi_frame(file::IOStream, t::Int, N_mol::Int, Φs::Vector{<:SVect
     for m in 1:N_mol
         println(file, "$m $(Φs[m][1]) $(Φs[m][2]) $(Φs[m][3])")
     end
-    flush(file)
+    #flush(file) not flushing at everyframe
 end
 
 struct StorePhiTrajectories <: AriannaAlgorithm
