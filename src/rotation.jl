@@ -31,7 +31,7 @@ function get_all_body_frames!(R_bodyframe, system::Molecules)
     L   = system.box[1]
     pos = system.position
     @inbounds for m in 1:system.Nmol
-        s        = system.start_mol[m]
+        s = system.start_mol[m]
         R_bodyframe[m] = body_frame(pos[s], pos[s+1], pos[s+2], L)
     end
 end
@@ -112,7 +112,7 @@ function Arianna.initialise(algorithm::ComputeRotation, simulation::Simulation)
         n_θ    = length(algorithm.theta_T)
 
         state.R_bodyframe = Vector{SMatrix{3,3,T,9}}(undef, N_mol)  # allocate once
-        get_all_body_frames!(state.R_bodyframe, system)              # ← state.R_buf
+        get_all_body_frames!(state.R_bodyframe, system)              # fill state.R_bodyframe
 
         state.R_ref       = [copy(state.R_bodyframe) for _ in 1:n_θ]
         state.Φ_acc       = [[zero(SVector{3,T}) for _ in 1:N_mol] for _ in 1:n_θ]
@@ -133,7 +133,7 @@ function Arianna.make_step!(simulation::Simulation, algorithm::ComputeRotation)
         system = simulation.chains[c]
         state  = algorithm.states[c]
         N_mol  = system.Nmol
-        get_all_body_frames!(state.R_bodyframe, system)   # ← in-place, no alloc                       # ← alias, no copy
+        get_all_body_frames!(state.R_bodyframe, system)   # no new vector created updates state.R_bodyframe
         for (k, θ_T) in enumerate(algorithm.theta_T)
             for m in 1:N_mol
                 dR        = state.R_ref[k][m]' * state.R_bodyframe[m]
