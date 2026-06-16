@@ -38,7 +38,6 @@ end
 
 function rotation_vector(R::SMatrix{3,3,T}) where {T}
     cos_θ = clamp((tr(R) - 1) / 2, -one(T), one(T))
-    θ = acos(cos_θ)
 
     ax = R[3,2] - R[2,3]
     ay = R[1,3] - R[3,1]
