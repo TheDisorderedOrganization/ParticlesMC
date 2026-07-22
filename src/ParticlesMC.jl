@@ -18,6 +18,7 @@ include("utils.jl")
 include("neighbours.jl")
 include("models.jl")
 include("molecules.jl")
+include("orientation.jl")
 include("atoms.jl")
 include("moves.jl")
 include("rotation.jl")
@@ -136,6 +137,8 @@ export energy
 export Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer
 export NeighbourList, LinkedList, CellList, EmptyList, VerletList
 export Atoms, Molecules
+export OrientationDefinition, CenterToAtomOrientation, PlaneNormalOrientation
+export orientation, molecule_center_of_mass
 export Displacement, DiscreteSwap, MoleculeFlip
 export fold_back, System
 export SimpleGaussian, DoubleUniform, EnergyBias
@@ -176,6 +179,7 @@ ParticlesMC implemented in Comonicon.
     list_type = get(system, "list_type", "LinkedList")  # optional field
     list_parameters = get(system, "list_parameters", nothing)  # optional field
     bonds = get(system, "bonds", nothing)
+    masses = get(system, "masses", nothing)
 
     # Extract simulation parameters
     sim = params["simulation"]
@@ -197,6 +201,7 @@ ParticlesMC implemented in Comonicon.
             "list_type" => list_type,
             "list_parameters" => list_parameters,
             "bonds" => bonds,
+            "masses" => masses,
         ),
         filename=filename,
         )
@@ -207,6 +212,7 @@ ParticlesMC implemented in Comonicon.
             "model" => model,
             "list_type" => list_type,
             "list_parameters" => list_parameters,
+            "masses" => masses,
         ),
         filename=filename,
         )

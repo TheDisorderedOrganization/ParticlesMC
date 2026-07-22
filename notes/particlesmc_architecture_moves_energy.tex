@@ -1,0 +1,672 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+
+\lstdefinestyle{julia}{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  keywordstyle=\color{blue!60!black},
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{orange!60!black}
+}
+\lstset{style=julia}
+
+\title{Notes on the Architecture, Moves, Energies, and Metropolis Rule in \texttt{ParticlesMC}}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Purpose of the Code}
+
+\texttt{ParticlesMC} is a Julia package for Monte Carlo simulations of particle
+and molecular systems. The package is built as a domain-specific layer on top of
+\texttt{Arianna}. In this architecture, \texttt{Arianna} provides the generic
+Monte Carlo simulation machinery, while \texttt{ParticlesMC} defines:
+
+\begin{itemize}[nosep]
+  \item what a particle or molecular system is;
+  \item how pair and bonded energies are computed;
+  \item which Monte Carlo moves are available;
+  \item how proposed moves are applied and reverted;
+  \item how configurations and trajectories are loaded and stored;
+  \item how a user-facing TOML file is converted into a simulation.
+\end{itemize}
+
+\section{High-Level Architecture}
+
+The main package entry point is:
+
+\begin{center}
+\texttt{src/ParticlesMC.jl}
+\end{center}
+
+This file defines the module, imports \texttt{Arianna}, includes the other source
+files, exports the public API, and defines the command-line interface
+\texttt{particlesmc}.
+
+\subsection{Main Source Files}
+
+\begin{description}[leftmargin=3.2cm, style=nextline]
+  \item[\texttt{ParticlesMC.jl}]
+  Top-level module, exports, generic helpers, and the \texttt{particlesmc}
+  command-line interface.
+
+  \item[\texttt{atoms.jl}]
+  Defines the \texttt{Atoms} system type for non-bonded particle systems and its
+  energy calculation.
+
+  \item[\texttt{molecules.jl}]
+  Defines the \texttt{Molecules} system type for systems with molecular identity
+  and bonds. It contains both bonded and non-bonded energy calculations.
+
+  \item[\texttt{orientation.jl}]
+  Defines replaceable molecular-orientation conventions, periodic molecular
+  unwrapping, and mass-weighted center-of-mass calculations.
+
+  \item[\texttt{models.jl}]
+  Defines interaction models and potentials, for example Lennard-Jones,
+  smoothed Lennard-Jones, soft spheres, and generalized Kremer-Grest-type
+  interactions.
+
+  \item[\texttt{neighbours.jl}]
+  Defines neighbor-list data structures used to reduce the cost of local energy
+  calculations.
+
+  \item[\texttt{moves.jl}]
+  Defines Monte Carlo actions such as particle displacements, species swaps, and
+  molecule flips. It also defines proposal policies and methods required by
+  \texttt{Arianna}.
+
+  \item[\texttt{utils.jl}]
+  Defines the target Boltzmann weight, periodic boundary helpers, species-list
+  helpers, and the energy callback.
+
+  \item[\texttt{IO/IO.jl}]
+  Defines loading and storing of configurations. Format-specific logic is split
+  into \texttt{IO/xyz.jl}, \texttt{IO/exyz.jl}, and \texttt{IO/lammps.jl}.
+
+  \item[\texttt{rotation.jl}]
+  Defines a custom \texttt{AriannaAlgorithm} for molecular rotation observables.
+\end{description}
+
+\subsection{Simulation Flow}
+
+The command-line path is:
+
+\begin{enumerate}[nosep]
+  \item read a TOML parameter file;
+  \item read initial configurations through \texttt{load\_chains};
+  \item build either \texttt{Atoms} or \texttt{Molecules} systems;
+  \item build the interaction model matrix;
+  \item construct a pool of moves;
+  \item construct an \texttt{Arianna} algorithm list;
+  \item create \texttt{Simulation(chains, algorithm\_list, steps)};
+  \item call \texttt{run!(simulation)}.
+\end{enumerate}
+
+Conceptually:
+
+\[
+\text{TOML input}
+\rightarrow
+\text{systems}
+\rightarrow
+\text{moves + algorithms}
+\rightarrow
+\text{Arianna simulation}
+\rightarrow
+\text{outputs}.
+\]
+
+\section{System Types}
+
+\subsection{Particles}
+
+The abstract base type is:
+
+\begin{lstlisting}[language=Julia]
+abstract type Particles <: AriannaSystem end
+\end{lstlisting}
+
+Both \texttt{Atoms} and \texttt{Molecules} are subtypes of \texttt{Particles}.
+This lets generic methods dispatch on \texttt{Particles}, while specialized
+methods can dispatch on \texttt{Atoms} or \texttt{Molecules}.
+
+\subsection{Atoms}
+
+\texttt{Atoms} represents a non-bonded particle system. Important fields include:
+
+\begin{itemize}[nosep]
+  \item \texttt{position}: particle positions;
+  \item \texttt{species}: particle species labels;
+  \item \texttt{density}, \texttt{temperature};
+  \item \texttt{energy}: total system energy, stored as a one-element vector;
+  \item \texttt{model\_matrix}: pair interaction model for every species pair;
+  \item \texttt{box}: periodic simulation box;
+  \item \texttt{neighbour\_list}: object used to find local neighbors;
+  \item \texttt{species\_list}: helper used for species-swap moves.
+\end{itemize}
+
+\subsection{Molecules}
+
+\texttt{Molecules} extends the particle-system idea with molecular structure:
+
+\begin{itemize}[nosep]
+  \item \texttt{molecule}: molecule id for each particle;
+  \item \texttt{mass}: mass of each particle;
+  \item \texttt{start\_mol}, \texttt{length\_mol}: start and length of each molecule;
+  \item \texttt{Nmol}: number of molecules;
+  \item \texttt{bonds}: bonded neighbors for each particle;
+  \item \texttt{Phi}: rotation-vector observable storage.
+\end{itemize}
+
+Mass is stored once per particle. The public \texttt{System} constructor accepts
+the optional keyword \texttt{masses}. If it is omitted, every particle receives
+unit mass, preserving the behavior of configurations created before mass support
+was introduced. Supplied masses must be finite, strictly positive, and have the
+same length as the position array. For command-line simulations, masses may be
+specified in the \texttt{[system]} TOML table:
+
+\begin{lstlisting}
+[system]
+masses = [1.0, 2.0, 1.0]
+\end{lstlisting}
+
+Mass does not modify the configurational pair Hamiltonian or the current Monte
+Carlo acceptance rule. It is presently used to define molecular centers of mass
+and orientations.
+
+\section{Molecular Orientation}
+
+Molecular orientation is implemented separately in
+\texttt{src/orientation.jl}. This separation allows the geometrical convention
+to change without modifying Monte Carlo moves or the future external-field
+energy term. All orientation functions return a unit vector and account for
+periodic boundaries by first placing the atoms in mutually consistent images.
+
+For positions \(\mathbf r_i\) and masses \(m_i\), the center of mass is
+
+\begin{equation}
+\mathbf r_{\mathrm{COM}}
+=
+\frac{\sum_i m_i\mathbf r_i}{\sum_i m_i}.
+\end{equation}
+
+It is available through:
+
+\begin{lstlisting}[language=Julia]
+center = molecule_center_of_mass(system, molecule_id)
+\end{lstlisting}
+
+\subsection{Center-to-Atom Convention}
+
+\texttt{CenterToAtomOrientation(a)} defines the orientation from the center of
+mass to local atom \(a\):
+
+\begin{equation}
+\mathbf n
+=
+\frac{\mathbf r_a-\mathbf r_{\mathrm{COM}}}
+     {\lVert\mathbf r_a-\mathbf r_{\mathrm{COM}}\rVert}.
+\end{equation}
+
+For example:
+
+\begin{lstlisting}[language=Julia]
+definition = CenterToAtomOrientation(1)
+n = orientation(definition, system, molecule_id)
+\end{lstlisting}
+
+The atom index is local to the selected molecule rather than a global particle
+index.
+
+\subsection{Triangular Plane-Normal Convention}
+
+\texttt{PlaneNormalOrientation(a,b,c)} defines the right-handed normal to the
+surface determined by three ordered local atoms:
+
+\begin{equation}
+\mathbf n
+=
+\frac{(\mathbf r_b-\mathbf r_a)\times
+      (\mathbf r_c-\mathbf r_a)}
+     {\lVert(\mathbf r_b-\mathbf r_a)\times
+      (\mathbf r_c-\mathbf r_a)\rVert}.
+\end{equation}
+
+The default is \texttt{PlaneNormalOrientation(1,2,3)}. Exchanging two indices
+reverses \(\mathbf n\), so atom ordering fixes the sign needed by a polar field
+coupling. The plane normal itself is independent of the atomic masses. Collinear
+or coincident defining coordinates are rejected because they do not define a
+unique normal.
+
+The external-field Hamiltonian and its contribution to trial-move energy
+changes are not yet implemented; the current code establishes only mass storage
+and the orientation geometry on which that later term will depend.
+
+\section{Interaction Models and Hamiltonians}
+
+The interaction models are defined in \texttt{src/models.jl}. The base types are:
+
+\begin{lstlisting}[language=Julia]
+abstract type Model end
+abstract type DiscreteModel <: Model end
+abstract type ContinuousModel <: Model end
+\end{lstlisting}
+
+For a pair of particles \(i,j\), the code obtains the appropriate interaction by
+species:
+
+\[
+M_{ij} = \texttt{model\_matrix}_{s_i,s_j}.
+\]
+
+Then it evaluates either:
+
+\[
+U_{ij}^{\mathrm{nb}} = V_{M_{ij}}(r_{ij}^2),
+\]
+
+or, for bonded molecular pairs,
+
+\[
+U_{ij}^{\mathrm{b}} = V_{M_{ij}}^{\mathrm{bond}}(r_{ij}^2).
+\]
+
+Here \(r_{ij}\) is computed using the nearest-image convention for periodic
+boundary conditions.
+
+\subsection{Hamiltonian for Particle Systems}
+
+For an \texttt{Atoms} system, the Hamiltonian is purely pairwise and non-bonded:
+
+\begin{equation}
+H_{\mathrm{atoms}}(\mathbf{r}, \mathbf{s})
+=
+\sum_{1 \le i < j \le N}
+V_{s_i s_j}(r_{ij}^2)
+\mathbf{1}\!\left(r_{ij}^2 \le r_{\mathrm{cut},s_i s_j}^2\right).
+\end{equation}
+
+Equivalently, the code computes a local energy:
+
+\begin{equation}
+E_i
+=
+\sum_{j \in \mathcal{N}(i)}
+V_{s_i s_j}(r_{ij}^2),
+\end{equation}
+
+where \(\mathcal{N}(i)\) is supplied by the chosen neighbor list. The total
+energy is initialized as:
+
+\begin{equation}
+H_{\mathrm{atoms}} = \frac{1}{2}\sum_{i=1}^N E_i.
+\end{equation}
+
+The factor \(1/2\) appears because a pair \(i,j\) is counted once in \(E_i\) and
+once in \(E_j\).
+
+\subsection{Hamiltonian for Molecular Systems}
+
+For a \texttt{Molecules} system, the Hamiltonian has bonded and non-bonded parts:
+
+\begin{equation}
+H_{\mathrm{mol}}
+=
+H_{\mathrm{bond}}
++
+H_{\mathrm{nonbond}}.
+\end{equation}
+
+The bonded part is:
+
+\begin{equation}
+H_{\mathrm{bond}}
+=
+\sum_{(i,j)\in \mathcal{B}}
+V_{s_i s_j}^{\mathrm{bond}}(r_{ij}^2),
+\end{equation}
+
+where \(\mathcal{B}\) is the set of bonds.
+
+The non-bonded part is:
+
+\begin{equation}
+H_{\mathrm{nonbond}}
+=
+\sum_{\substack{1 \le i < j \le N \\ (i,j)\notin \mathcal{B}}}
+V_{s_i s_j}(r_{ij}^2)
+\mathbf{1}\!\left(r_{ij}^2 \le r_{\mathrm{cut},s_i s_j}^2\right).
+\end{equation}
+
+Locally, for one particle \(i\), the code computes:
+
+\begin{equation}
+E_i
+=
+\sum_{j\in \mathcal{B}(i)}
+V_{s_i s_j}^{\mathrm{bond}}(r_{ij}^2)
++
+\sum_{j\in \mathcal{N}(i),\, j\notin \mathcal{B}(i)}
+V_{s_i s_j}(r_{ij}^2).
+\end{equation}
+
+Then the initial total energy is again:
+
+\begin{equation}
+H_{\mathrm{mol}} = \frac{1}{2}\sum_{i=1}^N E_i.
+\end{equation}
+
+\section{Where Energy is Computed in the Code}
+
+The generic entry point is in \texttt{src/ParticlesMC.jl}:
+
+\begin{lstlisting}[language=Julia]
+function compute_energy_particle(system::Particles, i::Int)
+    return compute_energy_particle(system, i, system.neighbour_list)
+end
+\end{lstlisting}
+
+\subsection{Atoms Energy}
+
+For \texttt{Atoms}, the local particle energy is computed in
+\texttt{src/atoms.jl}:
+
+\begin{lstlisting}[language=Julia]
+function compute_energy_particle(system::Atoms, i, neighbour_list::NeighbourList)
+    energy_i = zero(typeof(system.density))
+    position_i = get_position(system, i)
+    for j in neighbour_list(system, i)
+        energy_i += compute_energy_ij(system, i, j, position_i)
+    end
+    return energy_i
+end
+\end{lstlisting}
+
+The pair energy is:
+
+\begin{lstlisting}[language=Julia]
+function compute_energy_ij(system::Atoms, i, j, position_i)
+    i == j && return zero(typeof(system.density))
+    model_ij = get_model(system, i, j)
+    position_j = get_position(system, j)
+    r2 = nearest_image_distance_squared(position_i, position_j, get_box(system))
+    r2 > cutoff2(model_ij) && return zero(typeof(system.density))
+    return potential(r2, model_ij)
+end
+\end{lstlisting}
+
+\subsection{Molecules Energy}
+
+For \texttt{Molecules}, local energy is computed in \texttt{src/molecules.jl}:
+
+\begin{lstlisting}[language=Julia]
+function compute_energy_particle(system::Molecules, i, neighbour_list::NeighbourList)
+    position_i = system.position[i]
+    bonds_i = system.bonds[i]
+
+    energy_i = compute_energy_bonded_i(system, i, position_i, bonds_i)
+    for j in neighbour_list(system, i)
+        energy_i += check_nonbonded_compute_energy_ij(system, i, j, position_i, bonds_i)
+    end
+    return energy_i
+end
+\end{lstlisting}
+
+Bonded energy calls:
+
+\begin{lstlisting}[language=Julia]
+bond_potential(r2, model_ij)
+\end{lstlisting}
+
+Non-bonded energy calls:
+
+\begin{lstlisting}[language=Julia]
+potential(r2, model_ij)
+\end{lstlisting}
+
+\section{Moves and the \texttt{Arianna} Interface}
+
+\texttt{src/moves.jl} defines the available Monte Carlo actions and how they
+interact with the \texttt{Arianna} engine.
+
+\subsection{Important Distinction}
+
+\texttt{moves.jl} does not implement the full Metropolis algorithm. Instead, it
+implements methods that \texttt{Arianna}'s \texttt{Metropolis} algorithm calls.
+
+That division is:
+
+\begin{center}
+\begin{tabular}{ll}
+\textbf{\texttt{Arianna}} & Metropolis loop, accept/reject logic, scheduling \\
+\textbf{\texttt{ParticlesMC}} & moves, energy differences, proposal densities, reverts
+\end{tabular}
+\end{center}
+
+\subsection{The Central Hook}
+
+The main method connecting moves to \texttt{Arianna} is:
+
+\begin{lstlisting}[language=Julia]
+function Arianna.perform_action!(system::Particles, action::Action)
+    e1, e2 = perform_action!(system, action)
+    if isinf(e1) || isinf(e2)
+        action.delta_e = zero(typeof(system.energy[1]))
+    else
+        action.delta_e = e2 - e1
+        system.energy[1] += action.delta_e
+    end
+    return e1, e2
+end
+\end{lstlisting}
+
+In the source code the field is written as \texttt{delta e} using the Julia
+unicode symbol \texttt{delta e}; in these notes we write it as \(\Delta E\).
+
+The purpose is:
+
+\begin{enumerate}[nosep]
+  \item compute the energy before the proposed move, \(E_1\);
+  \item apply the move;
+  \item compute the energy after the move, \(E_2\);
+  \item store \(\Delta E = E_2 - E_1\);
+  \item temporarily update the system energy.
+\end{enumerate}
+
+If \texttt{Arianna} rejects the move, it calls the corresponding
+\texttt{Arianna.revert\_action!} method.
+
+\subsection{Displacement Move}
+
+\texttt{Displacement} moves one particle:
+
+\[
+\mathbf{r}_i' = \mathbf{r}_i + \boldsymbol{\delta}.
+\]
+
+The proposal policy \texttt{SimpleGaussian} samples:
+
+\[
+i \sim \mathrm{Uniform}\{1,\dots,N\},
+\qquad
+\boldsymbol{\delta} \sim \mathcal{N}(0,\sigma^2 I).
+\]
+
+Because the Gaussian displacement is symmetric,
+
+\[
+q(x\to x') = q(x'\to x),
+\]
+
+so the proposal-density terms cancel in ordinary Metropolis sampling.
+
+The code computes only the local energy of particle \(i\) before and after the
+move:
+
+\[
+\Delta E = E_i(\mathbf{r}_i') - E_i(\mathbf{r}_i).
+\]
+
+\subsection{Discrete Species Swap}
+
+\texttt{DiscreteSwap} swaps the species labels of two particles:
+
+\[
+s_i' = s_j,
+\qquad
+s_j' = s_i.
+\]
+
+The policy \texttt{DoubleUniform} selects one particle from each of two species
+lists:
+
+\[
+i \sim \mathrm{Uniform}(\{k:s_k=a\}),
+\qquad
+j \sim \mathrm{Uniform}(\{k:s_k=b\}).
+\]
+
+The log proposal density in the code is:
+
+\[
+\log q(x\to x') =
+-\log(N_a N_b),
+\]
+
+where \(N_a\) and \(N_b\) are the numbers of particles of the two selected
+species.
+
+The energy change is computed from the local energies of particles \(i\) and
+\(j\):
+
+\[
+\Delta E =
+\left(E_i' + E_j'\right)
+-
+\left(E_i + E_j\right).
+\]
+
+\subsection{Energy-Biased Swap}
+
+\texttt{EnergyBias} is a non-uniform proposal policy. It samples particles with
+weights depending on their local energies:
+
+\[
+w_i^{(a)} \propto \exp(\theta_1 E_i),
+\qquad
+w_j^{(b)} \propto \exp(\theta_2 E_j).
+\]
+
+The proposal density is therefore not generally symmetric. This is why the code
+implements:
+
+\begin{lstlisting}[language=Julia]
+Arianna.log_proposal_density(action, ::EnergyBias, parameters, system)
+\end{lstlisting}
+
+For non-symmetric proposals, the Metropolis-Hastings correction must include
+the proposal-ratio term.
+
+\subsection{Molecule Flip}
+
+\texttt{MoleculeFlip} swaps two sites within the same molecule:
+
+\[
+s_i' = s_j,
+\qquad
+s_j' = s_i,
+\qquad
+i,j \in \text{same molecule}.
+\]
+
+It is similar to \texttt{DiscreteSwap}, but constrained by molecular membership.
+
+\section{Where the Metropolis Rule Is}
+
+The Metropolis algorithm itself is not defined in \texttt{src/moves.jl}. It is
+provided by \texttt{Arianna}. In this package, \texttt{Metropolis} appears when
+building the algorithm list:
+
+\begin{lstlisting}[language=Julia]
+(algorithm=Metropolis, pool=pool, seed=seed,
+ parallel=parallel, sweepstep=length(chains[1]))
+\end{lstlisting}
+
+The Boltzmann target density needed by Metropolis is defined in
+\texttt{src/utils.jl}:
+
+\begin{lstlisting}[language=Julia]
+function Arianna.unnormalised_log_target_density(e, system::Particles)
+    return -e / system.temperature
+end
+\end{lstlisting}
+
+and:
+
+\begin{lstlisting}[language=Julia]
+function Arianna.delta_log_target_density(e1, e2, system::Particles)
+    return -(e2 - e1) ./ system.temperature
+end
+\end{lstlisting}
+
+Thus, for a symmetric proposal, the acceptance probability is:
+
+\begin{equation}
+P_{\mathrm{acc}}(x\to x')
+=
+\min\left[1,\exp\left(-\frac{\Delta E}{T}\right)\right].
+\end{equation}
+
+For a non-symmetric proposal, the Metropolis-Hastings form is:
+
+\begin{equation}
+P_{\mathrm{acc}}(x\to x')
+=
+\min\left[
+1,
+\exp\left(
+-\frac{\Delta E}{T}
++
+\log q(x'\to x)
+-
+\log q(x\to x')
+\right)
+\right].
+\end{equation}
+
+The proposal-density terms are supplied by \texttt{moves.jl} through methods
+like:
+
+\begin{lstlisting}[language=Julia]
+Arianna.log_proposal_density(action, policy, parameters, system)
+\end{lstlisting}
+
+\section{Summary}
+
+\begin{itemize}
+  \item The full simulation loop and Metropolis accept/reject rule are provided
+  by \texttt{Arianna}.
+  \item \texttt{ParticlesMC} defines systems, energies, moves, proposal policies,
+  and file IO.
+  \item Energy is computed locally using neighbor lists.
+  \item For \texttt{Atoms}, the Hamiltonian is a sum of non-bonded pair
+  potentials.
+  \item For \texttt{Molecules}, the Hamiltonian contains both bonded and
+  non-bonded contributions.
+  \item \texttt{moves.jl} tells \texttt{Arianna} how to sample, apply, score, and
+  revert moves.
+  \item The Boltzmann target used by Metropolis is \(\log \pi(x) = -H(x)/T\).
+\end{itemize}
+
+\end{document}
