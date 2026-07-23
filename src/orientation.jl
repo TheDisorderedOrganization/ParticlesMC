@@ -16,7 +16,8 @@ abstract type OrientationDefinition end
     CenterToAtomOrientation(atom=1)
 
 Define the molecular orientation as the unit vector from the molecule's
-centre of mass to local atom `atom`.
+centre of mass to local atom `atom`. The atom index is local to the molecule:
+`atom=1` selects the first atom of that molecule, not particle 1 of the system.
 """
 struct CenterToAtomOrientation <: OrientationDefinition
     atom::Int
@@ -88,7 +89,28 @@ function molecule_center_of_mass(positions::AbstractVector{<:SVector{D,T}},
     return sum(mass * position for (mass, position) in zip(masses, unwrapped)) / total_mass
 end
 
-"""Compute an orientation from an explicit collection of molecular positions."""
+"""
+    molecule_center_of_mass(system, molecule_id)
+
+Compute the periodic center of mass of molecule `molecule_id`. This is the
+system-level convenience overload of `molecule_center_of_mass(positions,
+masses, box)`.
+"""
+function molecule_center_of_mass(system, molecule_id::Int)
+    1 <= molecule_id <= system.Nmol ||
+        throw(BoundsError(Base.OneTo(system.Nmol), molecule_id))
+    first_atom, last_atom = get_start_end_mol(system, molecule_id)
+    return molecule_center_of_mass(
+        @view(system.position[first_atom:last_atom]),
+        @view(system.mass[first_atom:last_atom]),
+        system.box,
+    )
+end
+
+"""
+Compute a center-to-atom orientation from positions and masses belonging to one
+molecule. Atom indices in `definition` are local to that molecule.
+"""
 function orientation(definition::CenterToAtomOrientation,
                      positions::AbstractVector{<:SVector{D,T}},
                      masses::AbstractVector{<:Real},
@@ -100,6 +122,10 @@ function orientation(definition::CenterToAtomOrientation,
     return _normalise_orientation(unwrapped[definition.atom] - center)
 end
 
+"""
+Compute a plane-normal orientation from positions belonging to one molecule.
+Atom indices in `definition` are local to that molecule.
+"""
 function orientation(definition::PlaneNormalOrientation,
                      positions::AbstractVector{<:SVector{3,T}},
                      box::SVector{3,T}) where {T<:AbstractFloat}
@@ -107,8 +133,7 @@ function orientation(definition::PlaneNormalOrientation,
     maximum(indices) <= length(positions) ||
         throw(BoundsError(positions, maximum(indices)))
     unwrapped = unwrap_molecule(positions, box)
-    center = sum(unwrapped) / length(unwrapped)
-    r1, r2, r3 = (unwrapped[i] - center for i in indices)
+    r1, r2, r3 = (unwrapped[i] for i in indices)
     return _normalise_orientation(cross(r2 - r1, r3 - r1))
 end
 
@@ -119,7 +144,7 @@ Compute the orientation of molecule `molecule_id` in a `Molecules` system.
 Atom indices stored in an orientation definition are local to that molecule.
 """
 function orientation(definition::OrientationDefinition,
-                     system::Molecules, molecule_id::Int)
+                     system, molecule_id::Int)
     1 <= molecule_id <= system.Nmol ||
         throw(BoundsError(Base.OneTo(system.Nmol), molecule_id))
     first_atom, last_atom = get_start_end_mol(system, molecule_id)
@@ -127,24 +152,12 @@ function orientation(definition::OrientationDefinition,
 end
 
 function orientation(definition::CenterToAtomOrientation,
-                     system::Molecules, molecule_id::Int)
+                     system, molecule_id::Int)
     1 <= molecule_id <= system.Nmol ||
         throw(BoundsError(Base.OneTo(system.Nmol), molecule_id))
     first_atom, last_atom = get_start_end_mol(system, molecule_id)
     return orientation(
         definition,
-        @view(system.position[first_atom:last_atom]),
-        @view(system.mass[first_atom:last_atom]),
-        system.box,
-    )
-end
-
-"""Compute the periodic center of mass of molecule `molecule_id`."""
-function molecule_center_of_mass(system::Molecules, molecule_id::Int)
-    1 <= molecule_id <= system.Nmol ||
-        throw(BoundsError(Base.OneTo(system.Nmol), molecule_id))
-    first_atom, last_atom = get_start_end_mol(system, molecule_id)
-    return molecule_center_of_mass(
         @view(system.position[first_atom:last_atom]),
         @view(system.mass[first_atom:last_atom]),
         system.box,
