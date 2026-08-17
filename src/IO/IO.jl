@@ -321,7 +321,8 @@ function load_chains(init_path; args=Dict(), filename="", verbose=false)
     if bool_molecule
         initial_molecule_array = broadcast_dict(config_dict, :molecule)
         initial_bond_array = broadcast_dict(config_dict, :bond)
-        chains = [System(initial_position_array[k], initial_species_array[k], initial_molecule_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, initial_bond_array[k], list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
+        masses = get(args, "masses", nothing)
+        chains = [System(initial_position_array[k], initial_species_array[k], initial_molecule_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, initial_bond_array[k], masses=masses, list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
     else
         chains = [System(initial_position_array[k], initial_species_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
     end

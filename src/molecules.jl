@@ -9,6 +9,7 @@ models, and the neighbour list structure used for energy and neighbour queries.
 
 Fields
 - `position::Vector{SVector{D,T}}`: positions of particles.
+- `mass::Vector{T}`: mass of each particle.
 - `Φ::Vector{Vector{SVector{3,T}}}`: rotation vector of molecules per threshold index k.
 - `species::VS`: species/type of each particle.
 - `molecule::VS`: molecule identifier for each particle.
@@ -24,6 +25,7 @@ Fields
 """
 struct Molecules{D,  VS<:AbstractVector, C<:NeighbourList, T<:AbstractFloat, SM<:AbstractArray} <: Particles
     position::Vector{SVector{D,T}}
+    mass::Vector{T}
     Φ::Vector{Vector{SVector{3,T}}}   # Φ[k][m] = rotation vector for molecule m, threshold k
     species::VS
     molecule::VS
@@ -59,7 +61,7 @@ struct NonBonded end
 """
 Create a `Molecules` system and initialize neighbour list and energy.
 
-`System(position, species, molecule, density, temperature, model_matrix, bonds; molecule_species=nothing, list_type=EmptyList)` builds
+`System(position, species, molecule, density, temperature, model_matrix, bonds; masses=nothing, molecule_species=nothing, list_type=EmptyList)` builds
 and returns a `Molecules` instance. It computes `start_mol`/`length_mol`,
 constructs the neighbour list of type `list_type`, builds it, and computes the
 initial total energy (with a check for Inf/NaN).
@@ -75,9 +77,13 @@ Arguments
 Returns
 - `Molecules` instance with neighbour list built and `energy[1]` set.
 """
-function System(position, species, molecule, density::T, temperature::T, model_matrix, bonds; molecule_species=nothing, list_type=EmptyList, list_parameters=nothing) where {T<:AbstractFloat}
+function System(position, species, molecule, density::T, temperature::T, model_matrix, bonds; masses=nothing, molecule_species=nothing, list_type=EmptyList, list_parameters=nothing) where {T<:AbstractFloat}
     @assert length(position) == length(species)
     N = length(position)
+    mass = isnothing(masses) ? ones(T, N) : T.(collect(masses))
+    length(mass) == N || throw(ArgumentError("one mass per particle is required"))
+    all(m -> isfinite(m) && m > zero(T), mass) ||
+        throw(ArgumentError("particle masses must be finite and strictly positive"))
     Φ = Vector{Vector{SVector{3,T}}}()   # empty, filled by ComputeRotation
     Nmol = length(unique(molecule))
     start_mol, length_mol = get_first_and_counts(molecule)
@@ -87,7 +93,7 @@ function System(position, species, molecule, density::T, temperature::T, model_m
     energy = zeros(T, 1)
     maxcut = maximum([model.rcut for model in model_matrix])
     neighbour_list = list_type(box, maxcut, N; list_parameters=list_parameters)
-    system = Molecules(position, Φ, species, molecule, molecule_species,  start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol,box, neighbour_list, bonds)
+    system = Molecules(position, mass, Φ, species, molecule, molecule_species, start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol, box, neighbour_list, bonds)
     build_neighbour_list!(system)
     local_energy = [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
     energy = sum(local_energy) / 2
