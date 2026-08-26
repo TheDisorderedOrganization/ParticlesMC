@@ -67,6 +67,34 @@ function perform_action!(system::Particles, action::Displacement)
 end
 
 """
+Return the external-field energy associated with the molecule affected by a
+particle displacement. Future move types, including a geometric molecule flip,
+can provide their own action-specific method without changing the field model.
+"""
+function action_field_energy(system::Molecules, action::Displacement)
+    molecule_id = system.molecule[action.i]
+    return field_energy(system.external_field, system, molecule_id)
+end
+
+"""
+Perform a molecular particle displacement, including the field-energy change of
+the displaced particle's molecule exactly once.
+"""
+function perform_action!(system::Molecules, action::Displacement)
+    neighbour_list = get_neighbour_list(system)
+    e₁ = compute_energy_particle(system, action.i, neighbour_list) +
+         action_field_energy(system, action)
+
+    update_position!(system, action)
+    update_neighbour_list!(system, action.i, neighbour_list)
+
+    e₂ = compute_energy_particle(system, action.i, neighbour_list) +
+         action_field_energy(system, action)
+    action.δe = e₂ - e₁
+    return e₁, e₂
+end
+
+"""
 Revert a previously applied `Displacement` action.
 
 This function applies `action.δ` (which should typically be the inverse
