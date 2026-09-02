@@ -22,7 +22,7 @@ The configuration generated at the previous step needs to be further equilibrate
 
 The next step is therefore to run long simulations, one for each target temperature, to produce inputs for the production runs.
 
-This is done by running the bash script in the [2-equilibrate-at-different-temperatures](./2-equilibrate-at-different-temperatures) subfolder.
+This is done by running the create-folders.sh script in the [2-equilibrate-at-different-temperatures](./2-equilibrate-at-different-temperatures) subfolder. Then run `particlesmc params.toml` in each of the subdirectories.
 
 ## 3 - Run production simulations
 
