@@ -9,6 +9,7 @@ module ParticlesMC
 using Arianna, StaticArrays, Transducers
 using Comonicon, TOML
 using Comonicon: @main
+using Serialization
 
 export Particles
 abstract type Particles <: AriannaSystem end
@@ -364,9 +365,28 @@ ParticlesMC implemented in Comonicon.
     M = 1
     path = joinpath(output_path)
     simulation = Simulation(chains, algorithm_list, steps; t_start=t_start, path=path, verbose=true)
+    
+    if restart 
+        for c in eachindex(simulation.chains)
+            rng_path = joinpath(simulation.path,"chains",string(c),"rng_state.jls")
+            rng = open(rng_path,"r") do file
+                deserialize(file)
+            end
+            simulation.algorithms[1].rngs[c] = rng
+        end
+    end
 
     # Run the simulation
     status = run!(simulation; wall_time=wall_time)
+
+    # Save RNG sequence for bit to bit reproducibility
+    for c in eachindex(simulation.chains)
+        rng_path = joinpath(simulation.path,"chains",string(c),"rng_state.jls")
+        open(rng_path,"w") do file 
+            serialize(file,simulation.algorithms[1].rngs[c])
+        end
+    end
+
     exit(status == :need_restart ? 1 : 0) # if t did not reached steps then a 1 flag is exit in order to restart the simulation through a bash script
 
 end
