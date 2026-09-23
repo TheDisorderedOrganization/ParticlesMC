@@ -77,12 +77,13 @@ function read_header(data, format::LAMMPS)
     number_of_atoms_index = findfirst(contains("ITEM: NUMBER OF ATOMS"), data)
     box_bounds_index = findfirst(contains("ITEM: BOX BOUNDS"), data)
     columns_index = findfirst(contains("ITEM: ATOMS"), data)
+    t = timestep_index === nothing ? 0 : parse(Int, data[timestep_index + 1]) # t value is the next line after "ITEM: TIMESTEP"
     N = parse(Int, data[number_of_atoms_index + 1])
     box_bounds = data[box_bounds_index + 1:box_bounds_index + 3]
     box_bounds = [parse.(Float64, split(elt)) for elt in box_bounds] # Convert row elements to Float64
     box = [elt[2] - elt[1] for elt in box_bounds]
     column_info = parse_column_string(data[columns_index], format)
-    return N, box, column_info, []
+    return t, N, box, column_info, [] # add t to the returned value
 end
 
 function write_header(io, system::Particles, t, format::LAMMPS, digits::Integer)

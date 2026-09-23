@@ -41,13 +41,15 @@ function read_header(data, format::XYZ)
     metadata = split(data[2], " ")  # Metadata split into an array
 
     # Extract cell vector from metadata
+    step_idx = findfirst(startswith("step:"), metadata)
+    t = step_idx === nothing ? 0 : parse(Int, replace(metadata[step_idx], "step:" => ""))
     cell_str = replace(metadata[findfirst(startswith("cell:"), metadata)], "cell:" => "")
     cell_vector = parse.(Float64, split(cell_str, ","))
     d = length(cell_vector)
     box = SVector{d}(cell_vector)
     column_str = replace(metadata[findfirst(startswith("columns:"), metadata)], "columns:" => "")
     column_info = parse_column_string(column_str, format; d=d)
-    return N, box, column_info, metadata
+    return t, N, box, column_info, metadata
 end
 
 function get_system_column(::Atoms, ::XYZ)

@@ -41,10 +41,12 @@ function read_header(data, format::EXYZ)
     end
     lattice_matrix = reshape(lattice_values, 3, 3)
     box = lattice_matrix[diagind(lattice_matrix)]
-    column_match = match(r"Properties=(.*)", metadata_line)
+    column_match = match(r"Properties=(\S+)", metadata_line)
     column_str = mat === nothing ? nothing : column_match.captures[1]
     column_info = parse_column_string(column_str, format)
-    return N, box, column_info, split(metadata_line, " ")
+    time_match = match(r"Time=(\d+)", metadata_line)
+    t = time_match === nothing ? 0 : parse(Int, time_match.captures[1])
+    return t, N, box, column_info, split(metadata_line, " ")
 end
 
 function get_selrow(::EXYZ, N, m)
