@@ -379,7 +379,7 @@ ParticlesMC implemented in Comonicon.
     # Run the simulation
     status = run!(simulation; wall_time=wall_time)
 
-    # Save RNG sequence for bit to bit reproducibility
+    # Save RNG sequence to prevent bias on restart
     for c in eachindex(simulation.chains)
         rng_path = joinpath(simulation.path,"chains",string(c),"rng_state.jls")
         open(rng_path,"w") do file 
