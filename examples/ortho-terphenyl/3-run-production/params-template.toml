@@ -1,5 +1,5 @@
 [system]
-config = "../../2-equilibrate-at-different-temperatures/TEMPERATURE/trajectories/1/lastframe.xyz"
+config = "../../2-equilibrate-at-different-temperatures/TEMPERATURE/chains/1/lastframe.xyz"
 temperature = TEMPERATURE
 density = 1.2
 list_type = "LinkedList"
