@@ -2,7 +2,7 @@
 Molecules - type managing a collection of molecules (chains) of particles.
 
 Description
-`Molecules{D,VS,C,T,SM} <: Particles` represents a particle system organized into
+`Molecules{D,VS,C,T,SM,F} <: Particles` represents a particle system organized into
 molecules (or chains). It stores particle positions, molecule membership,
 molecule lengths and start indices, thermodynamic properties, interaction
 models, and the neighbour list structure used for energy and neighbour queries.
@@ -10,6 +10,7 @@ models, and the neighbour list structure used for energy and neighbour queries.
 Fields
 - `position::Vector{SVector{D,T}}`: positions of particles.
 - `mass::Vector{T}`: mass of each particle.
+- `external_field::F`: external one-body field acting on molecular orientation.
 - `Φ::Vector{Vector{SVector{3,T}}}`: rotation vector of molecules per threshold index k.
 - `species::VS`: species/type of each particle.
 - `molecule::VS`: molecule identifier for each particle.
@@ -23,9 +24,10 @@ Fields
 - `neighbour_list::C`: neighbour list structure (CellList/LinkedList/EmptyList).
 - `bonds::Vector{Vector{Int}}`: lists of bonded neighbours for each particle.
 """
-struct Molecules{D,  VS<:AbstractVector, C<:NeighbourList, T<:AbstractFloat, SM<:AbstractArray} <: Particles
+struct Molecules{D, VS<:AbstractVector, C<:NeighbourList, T<:AbstractFloat, SM<:AbstractArray, F<:ExternalField} <: Particles
     position::Vector{SVector{D,T}}
     mass::Vector{T}
+    external_field::F
     Φ::Vector{Vector{SVector{3,T}}}   # Φ[k][m] = rotation vector for molecule m, threshold k
     species::VS
     molecule::VS
@@ -61,7 +63,7 @@ struct NonBonded end
 """
 Create a `Molecules` system and initialize neighbour list and energy.
 
-`System(position, species, molecule, density, temperature, model_matrix, bonds; masses=nothing, molecule_species=nothing, list_type=EmptyList)` builds
+`System(position, species, molecule, density, temperature, model_matrix, bonds; masses=nothing, external_field=NoExternalField(), molecule_species=nothing, list_type=EmptyList)` builds
 and returns a `Molecules` instance. It computes `start_mol`/`length_mol`,
 constructs the neighbour list of type `list_type`, builds it, and computes the
 initial total energy (with a check for Inf/NaN).
@@ -77,7 +79,7 @@ Arguments
 Returns
 - `Molecules` instance with neighbour list built and `energy[1]` set.
 """
-function System(position, species, molecule, density::T, temperature::T, model_matrix, bonds; masses=nothing, molecule_species=nothing, list_type=EmptyList, list_parameters=nothing) where {T<:AbstractFloat}
+function System(position, species, molecule, density::T, temperature::T, model_matrix, bonds; masses=nothing, external_field::ExternalField=NoExternalField(), molecule_species=nothing, list_type=EmptyList, list_parameters=nothing) where {T<:AbstractFloat}
     @assert length(position) == length(species)
     N = length(position)
     mass = isnothing(masses) ? ones(T, N) : T.(collect(masses))
@@ -89,14 +91,17 @@ function System(position, species, molecule, density::T, temperature::T, model_m
     start_mol, length_mol = get_first_and_counts(molecule)
     molecule_species = something(molecule_species, ones(Int, N))
     d = length(Array(position)[1])
+    field_d = field_dimension(external_field)
+    isnothing(field_d) || field_d == d ||
+        throw(DimensionMismatch("external field has dimension $field_d, but the system has dimension $d"))
     box = @SVector fill(T((N / density)^(1 / d)), d)
     energy = zeros(T, 1)
     maxcut = maximum([model.rcut for model in model_matrix])
     neighbour_list = list_type(box, maxcut, N; list_parameters=list_parameters)
-    system = Molecules(position, mass, Φ, species, molecule, molecule_species, start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol, box, neighbour_list, bonds)
+    system = Molecules(position, mass, external_field, Φ, species, molecule, molecule_species, start_mol, length_mol, density, temperature, energy, model_matrix, d, N, Nmol, box, neighbour_list, bonds)
     build_neighbour_list!(system)
     local_energy = [compute_energy_particle(system, i, neighbour_list) for i in eachindex(position)]
-    energy = sum(local_energy) / 2
+    energy = sum(local_energy) / 2 + total_field_energy(external_field, system)
     if isinf(energy) || isnan(energy)
         error("Initial configuration has infinite or NaN energy.")
     end

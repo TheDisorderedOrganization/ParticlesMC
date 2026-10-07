@@ -249,9 +249,50 @@ coupling. The plane normal itself is independent of the atomic masses. Collinear
 or coincident defining coordinates are rejected because they do not define a
 unique normal.
 
-The external-field Hamiltonian and its contribution to trial-move energy
-changes are not yet implemented; the current code establishes only mass storage
-and the orientation geometry on which that later term will depend.
+\subsection{Aligning External Field}
+
+The aligning field is represented by \texttt{AligningField(h, definition)} and
+adds the one-body molecular energy
+
+\begin{equation}
+H_{\mathrm{field}}
+=
+-\sum_{m=1}^{N_{\mathrm{mol}}}\mathbf h\cdot\mathbf n_m.
+\end{equation}
+
+It is intentionally separate from pair-interaction models. During system
+initialization, the pair contribution is still divided by two, while each field
+term is added exactly once. A system without a field uses
+\texttt{NoExternalField()}, preserving previous behavior.
+
+An aligning field can be specified in TOML as:
+
+\begin{lstlisting}
+[system.external_field]
+type = "align"
+h = [0.0, 0.0, 0.7]
+orientation = "plane_normal"
+atoms = [1, 2, 3]
+\end{lstlisting}
+
+For the center-to-atom convention, use
+\texttt{orientation = "center\_to\_atom"} and \texttt{atom = 1}.
+
+For an ordinary particle displacement, only the orientation of the displaced
+particle's molecule is recomputed. The additional trial energy is
+
+\begin{equation}
+\Delta U_h
+=
+-\mathbf h\cdot
+\left(\mathbf n_m^{\mathrm{new}}-\mathbf n_m^{\mathrm{old}}\right).
+\end{equation}
+
+The implementation dispatches field scoring on the action type. Only
+\texttt{Displacement} is field-aware at present. A future geometric flip move
+can provide its own action-specific method because its affected orientation and
+energy accounting need not be identical to a one-particle displacement. The
+current \texttt{MoleculeFlip}, which swaps species labels, is unchanged.
 
 \section{Interaction Models and Hamiltonians}
 

@@ -5,7 +5,89 @@ using StaticArrays
 using Distributions
 using ComponentArrays
 using DelimitedFiles
+using LinearAlgebra
 using Pkg
+
+@testset "Molecular orientation" begin
+    box = SVector(10.0, 10.0, 10.0)
+    triangle = [
+        SVector(1.0, 1.0, 1.0),
+        SVector(2.0, 1.0, 1.0),
+        SVector(1.0, 2.0, 1.0),
+    ]
+    equal_masses = ones(3)
+    unequal_masses = [1.0, 2.0, 1.0]
+
+    @test molecule_center_of_mass(triangle, equal_masses, box) ≈
+          SVector(4 / 3, 4 / 3, 1.0)
+    @test molecule_center_of_mass(triangle, unequal_masses, box) ≈
+          SVector(1.5, 1.25, 1.0)
+    @test orientation(CenterToAtomOrientation(1), triangle, equal_masses, box) ≈
+          normalize(SVector(-1.0, -1.0, 0.0))
+    @test orientation(CenterToAtomOrientation(1), triangle, unequal_masses, box) ≈
+          normalize(SVector(-0.5, -0.25, 0.0))
+    @test orientation(PlaneNormalOrientation(), triangle, box) ≈
+          SVector(0.0, 0.0, 1.0)
+    @test orientation(PlaneNormalOrientation(1, 3, 2), triangle, box) ≈
+          SVector(0.0, 0.0, -1.0)
+
+    wrapped_triangle = [
+        SVector(9.5, 1.0, 1.0),
+        SVector(0.5, 1.0, 1.0),
+        SVector(9.5, 2.0, 1.0),
+    ]
+    @test orientation(CenterToAtomOrientation(1), wrapped_triangle, equal_masses, box) ≈
+          normalize(SVector(-1.0, -1.0, 0.0))
+    @test orientation(PlaneNormalOrientation(), wrapped_triangle, box) ≈
+          SVector(0.0, 0.0, 1.0)
+
+    @test_throws ArgumentError PlaneNormalOrientation(1, 1, 3)
+    @test_throws ArgumentError molecule_center_of_mass(triangle, [1.0, 2.0], box)
+    @test_throws ArgumentError molecule_center_of_mass(triangle, [1.0, 0.0, 1.0], box)
+    @test_throws ArgumentError orientation(
+        PlaneNormalOrientation(),
+        fill(SVector(1.0, 1.0, 1.0), 3),
+        box,
+    )
+end
+
+@testset "Aligning field with displacement" begin
+    common_args = Dict(
+        "temperature" => [2.0],
+        "model" => ["Trimer"],
+        "list_type" => "LinkedList",
+    )
+    field = AligningField(SVector(0.0, 0.0, 0.7), PlaneNormalOrientation())
+    no_field_system = load_chains("molecule.exyz", args=common_args)[1]
+    field_system = load_chains(
+        "molecule.exyz",
+        args=merge(common_args, Dict("external_field" => field)),
+    )[1]
+
+    @test field_system.energy[1] - no_field_system.energy[1] ≈
+          total_field_energy(field, field_system)
+
+    molecule_id = field_system.molecule[1]
+    old_field_energy = field_energy(field, field_system, molecule_id)
+    no_field_action = Displacement(1, SVector(0.0, 0.0, 0.02), 0.0)
+    field_action = Displacement(1, SVector(0.0, 0.0, 0.02), 0.0)
+    ParticlesMC.perform_action!(no_field_system, no_field_action)
+    ParticlesMC.perform_action!(field_system, field_action)
+    new_field_energy = field_energy(field, field_system, molecule_id)
+
+    @test field_action.δe - no_field_action.δe ≈
+          new_field_energy - old_field_energy atol=1e-10
+    @test field_system.external_field === field
+
+    config_field = ParticlesMC.external_field_from_config(Dict(
+        "type" => "align",
+        "h" => [0.0, 0.0, 0.7],
+        "orientation" => "center_to_atom",
+        "atom" => 2,
+    ))
+    @test config_field isa AligningField
+    @test config_field.orientation_definition == CenterToAtomOrientation(2)
+end
 
 @testset "Running from CLI" begin
     Pkg.build("ParticlesMC")
@@ -235,4 +317,3 @@ end
     run!(simulation)
     println("OK")
 end
-

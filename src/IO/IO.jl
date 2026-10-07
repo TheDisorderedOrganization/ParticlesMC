@@ -1,7 +1,7 @@
 module IO
 
 using ..ParticlesMC: Particles, Atoms, Molecules, System
-using ..ParticlesMC: fold_back, volume_sphere
+using ..ParticlesMC: fold_back, volume_sphere, external_field_from_config
 using ..ParticlesMC: EmptyList, LinkedList, CellList, VerletList
 using ..ParticlesMC: Model, GeneralKG, JBB, BHHP, SoftSpheres, KobAndersen, Trimer, LennardJones
 using Arianna
@@ -322,7 +322,8 @@ function load_chains(init_path; args=Dict(), filename="", verbose=false)
         initial_molecule_array = broadcast_dict(config_dict, :molecule)
         initial_bond_array = broadcast_dict(config_dict, :bond)
         masses = get(args, "masses", nothing)
-        chains = [System(initial_position_array[k], initial_species_array[k], initial_molecule_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, initial_bond_array[k], masses=masses, list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
+        external_field = external_field_from_config(get(args, "external_field", nothing))
+        chains = [System(initial_position_array[k], initial_species_array[k], initial_molecule_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, initial_bond_array[k], masses=masses, external_field=external_field, list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
     else
         chains = [System(initial_position_array[k], initial_species_array[k], initial_density_array[k], initial_temperature_array[k], model_matrix, list_type=list_type, list_parameters=list_parameters) for k in eachindex(initial_position_array)]
     end
