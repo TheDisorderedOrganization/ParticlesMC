@@ -9,6 +9,7 @@ module ParticlesMC
 using Arianna, StaticArrays, Transducers
 using Comonicon, TOML
 using Comonicon: @main
+using Serialization
 
 export Particles
 abstract type Particles <: AriannaSystem end
@@ -187,14 +188,39 @@ ParticlesMC implemented in Comonicon.
     burn = get(sim, "burn", 0)
     seed = sim["seed"]
     parallel = sim["parallel"]
+    wall_time = get(sim, "restart", Inf) # restart if specified in toml else Inf to run uncapped
     output_path = get(sim, "output_path", "./")
+
+    function restart_format(sim)
+        for output in get(sim,"output",[])
+            if output["algorithm"] == "StoreLastFrames"
+                return eval(Meta.parse("$(get(output,"fmt","XYZ"))()"))
+            end
+        end
+        return nothing
+    end
+
+    # detection of a restart or fresh start
+    restart_enabled = isfinite(wall_time)
+    fmt_ckpt  = restart_enabled ? restart_format(sim) : nothing
+    lastframe = isnothing(fmt_ckpt) ? "" : joinpath(output_path, "chains", "1", "lastframe$(fmt_ckpt.extension)")
+    t_start   = (fmt_ckpt !== nothing && isfile(lastframe)) ? load_configuration(lastframe)[:t] : 0
+    restart   = t_start > 0
 
     # Setup RNG and basic variables
 
     # optional field
 
+    if restart
+        chains_dir = joinpath(output_path, "chains")
+        cdirs = sort(readdir(chains_dir); by = s -> parse(Int, s))   # "1","2",…,"10" in NUMERIC order
+        load_path = [joinpath(chains_dir, c, "lastframe$(fmt_ckpt.extension)") for c in cdirs]
+    else
+        load_path = config
+    end
+
     if bonds !== nothing
-        chains = load_chains(config, args=Dict(
+        chains = load_chains(load_path, args=Dict(
             "temperature" => temperature,
             "density" => density,
             "model" => model,
@@ -204,9 +230,10 @@ ParticlesMC implemented in Comonicon.
             "masses" => masses,
         ),
         filename=filename,
+        fold=!restart,
         )
     else
-        chains = load_chains(config, args=Dict(
+        chains = load_chains(load_path, args=Dict(
             "temperature" => temperature,
             "density" => density,
             "model" => model,
@@ -215,6 +242,7 @@ ParticlesMC implemented in Comonicon.
             "masses" => masses,
         ),
         filename=filename,
+        fold=!restart,
         )
     end
     algorithm_list = []
@@ -287,7 +315,7 @@ ParticlesMC implemented in Comonicon.
             algorithm  = (
                 algorithm=ComputeRotation,
                 scheduler=sched,
-                theta_T=theta_T,
+                θ_T=theta_T,
             )
         else
             error("Unsupported observable algorithm: $alg")
@@ -330,6 +358,7 @@ ParticlesMC implemented in Comonicon.
                 path=output_path,
             )
         elseif alg == "PrintTimeSteps"
+            
             algorithm = (
                 algorithm=eval(Meta.parse(alg)),
                 scheduler=sched,
@@ -341,10 +370,30 @@ ParticlesMC implemented in Comonicon.
     end
     M = 1
     path = joinpath(output_path)
-    simulation = Simulation(chains, algorithm_list, steps; path=path, verbose=true)
+    simulation = Simulation(chains, algorithm_list, steps; t_start=t_start, path=path, verbose=true)
+    
+    if restart 
+        for c in eachindex(simulation.chains)
+            rng_path = joinpath(simulation.path,"chains",string(c),"rng_state.jls")
+            rng = open(rng_path,"r") do file
+                deserialize(file)
+            end
+            simulation.algorithms[1].rngs[c] = rng
+        end
+    end
 
     # Run the simulation
-    run!(simulation)
+    status = run!(simulation; wall_time=wall_time)
+
+    # Save RNG sequence to prevent bias on restart
+    for c in eachindex(simulation.chains)
+        rng_path = joinpath(simulation.path,"chains",string(c),"rng_state.jls")
+        open(rng_path,"w") do file 
+            serialize(file,simulation.algorithms[1].rngs[c])
+        end
+    end
+
+    exit(status == :need_restart ? 1 : 0) # if t did not reached steps then a 1 flag is exit in order to restart the simulation through a bash script
 
 end
 

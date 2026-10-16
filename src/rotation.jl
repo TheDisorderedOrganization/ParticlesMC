@@ -4,7 +4,7 @@
 # Two algorithms :
 # 1. ComputeRotation : updates system.Φ (simulation.observable)
 # 2. StorePhiTrajectory : writes system.Φ to disk
-# system.Φ[k][m] = rotation vector for molecule m under theta_T[k]
+# system.Φ[k][m] = rotation vector for molecule m under θ_T[k]
 
 using LinearAlgebra
 using StaticArrays
@@ -86,17 +86,17 @@ RotationState{T}() where {T} = RotationState{T}([], [], [], false)
 ##########                      ##########
 
 mutable struct ComputeRotation{T} <: AriannaAlgorithm
-    theta_T::Vector{T}                  # one per method
+    θ_T::Vector{T}                  # one per method
     states::Vector{RotationState{T}}    # one per chain
 end
 
 function ComputeRotation(chains;
-                     theta_T::Vector{Float64}=[π/4],
+                     θ_T::Vector{Float64}=[π/4],
                      scheduler::Vector{Int}=Int[],
                      kwargs...)
     n = length(chains) # number of chains
     states = [RotationState{Float64}() for _ in 1:n] # n rotation states independent
-    return ComputeRotation{Float64}(theta_T, states)
+    return ComputeRotation{Float64}(θ_T, states)
 end
     
 ##### Initialisation of the simulation #####
@@ -109,19 +109,29 @@ function Arianna.initialise(algorithm::ComputeRotation, simulation::Simulation)
         state  = algorithm.states[c]
         T      = typeof(system.temperature)
         N_mol  = system.Nmol
-        n_θ    = length(algorithm.theta_T)
+        n_θ    = length(algorithm.θ_T)
 
         state.R_bodyframe = Vector{SMatrix{3,3,T,9}}(undef, N_mol)  # allocate once
         get_all_body_frames!(state.R_bodyframe, system)              # fill state.R_bodyframe
 
-        state.R_ref       = [copy(state.R_bodyframe) for _ in 1:n_θ]
-        state.Φ_acc       = [[zero(SVector{3,T}) for _ in 1:N_mol] for _ in 1:n_θ]
-        state.initialized = true
-
-        resize!(system.Φ, n_θ)
-        for k in 1:n_θ
-            system.Φ[k] = [zero(SVector{3,T}) for _ in 1:N_mol]
+        if simulation.t_start > 0
+            _, _, _, _, R_ref, Φ_acc, Φ = read_phi_frame(joinpath(simulation.path,"chains", "$c", "lastphiframe.dat"))
+            state.R_ref = R_ref
+            state.Φ_acc = Φ_acc
+            resize!(system.Φ, n_θ)
+            for k in 1:n_θ
+                system.Φ[k] = Φ[k]
+            end
+        
+        else 
+            state.R_ref       = [copy(state.R_bodyframe) for _ in 1:n_θ]
+            state.Φ_acc       = [[zero(SVector{3,T}) for _ in 1:N_mol] for _ in 1:n_θ]
+            resize!(system.Φ, n_θ)
+            for k in 1:n_θ
+                system.Φ[k] = [zero(SVector{3,T}) for _ in 1:N_mol]
+            end
         end
+        state.initialized = true
     end
 end
 
@@ -134,7 +144,7 @@ function Arianna.make_step!(simulation::Simulation, algorithm::ComputeRotation)
         state  = algorithm.states[c]
         N_mol  = system.Nmol
         get_all_body_frames!(state.R_bodyframe, system)   # no new vector created updates state.R_bodyframe
-        for (k, θ_T) in enumerate(algorithm.theta_T)
+        for (k, θ_T) in enumerate(algorithm.θ_T)
             for m in 1:N_mol
                 dR        = state.R_ref[k][m]' * state.R_bodyframe[m]
                 Φ_current = rotation_vector(dR)
@@ -150,6 +160,42 @@ function Arianna.make_step!(simulation::Simulation, algorithm::ComputeRotation)
 end
 
 function Arianna.finalise(::ComputeRotation, ::Simulation) end
+
+##### Read a checkpoint ɸ frame #####
+##########                 ##########
+
+function read_phi_frame(path)
+    open(path) do file
+        t = parse(Int, split(readline(file), "=")[2])
+        N_mol = parse(Int, split(readline(file), "=")[2])
+        n_θ = parse(Int, split(readline(file), "=")[2])
+        θ_T = parse.(Float64, split(split(readline(file), "=")[2], ","))
+
+        R_ref = Vector{Vector{SMatrix{3,3,Float64,9}}}(undef, n_θ)
+        Φ_acc = Vector{Vector{SVector{3,Float64}}}(undef, n_θ)
+        Φ     = Vector{Vector{SVector{3,Float64}}}(undef, n_θ)
+
+        for k in 1:n_θ
+            R_ref[k] = read_block(file, N_mol, row_to_matrix)
+            Φ_acc[k] = read_block(file, N_mol, row_to_vector)
+            Φ[k] = read_block(file, N_mol, row_to_vector)
+        end
+    return (t, N_mol, n_θ, θ_T, R_ref, Φ_acc, Φ)
+    end
+end
+
+function read_block(file, N_mol, builder)
+    readline(file) # skip first # line
+    return [builder(split(readline(file), " ")) for _ in 1:N_mol]
+end
+
+function row_to_matrix(parts)
+    return SMatrix{3,3,Float64}(parse.(Float64, parts[2:10]))
+end
+
+function row_to_vector(parts)
+    return SVector{3,Float64}(parse.(Float64, parts[2:4]))
+end
 
 ##### Store rotation vector trajectory #####
 ##########                        ##########
@@ -188,12 +234,13 @@ function Arianna.initialise(algorithm::StorePhiTrajectories, simulation::Simulat
     simulation.verbose && println("Opening Φ trajectory files...")
     for c in eachindex(simulation.chains)
         system = simulation.chains[c]
+        writing_mode = simulation.t_start > 0 ? "a" : "w"
         n_θ    = length(system.Φ)
         algorithm.paths[c] = [joinpath(algorithm.dirs[c], "phitrajectories_$k.dat")
                                for k in 1:n_θ]
-        algorithm.files[c] = open.(algorithm.paths[c], "w")
+        algorithm.files[c] = open.(algorithm.paths[c], writing_mode)
     end
-    algorithm.store_first && Arianna.make_step!(simulation, algorithm)
+    (simulation.t_start == 0 && algorithm.store_first) && Arianna.make_step!(simulation, algorithm)
 end
 
 function Arianna.make_step!(simulation::Simulation, algorithm::StorePhiTrajectories)
@@ -217,6 +264,8 @@ end
 
 ##### Store last Φ frame for checkpoint/restart #####
 ##########                                    ##########
+
+
 
 struct StoreLastPhiFrame <: AriannaAlgorithm
     paths::Vector{String}   # one per chain: chains/c/rotation_checkpoint.dat
@@ -248,14 +297,14 @@ function Arianna.finalise(algorithm::StoreLastPhiFrame, simulation::Simulation)
         system = simulation.chains[c]
         state  = compute_rot.states[c]
         N_mol  = system.Nmol
-        n_θ    = length(compute_rot.theta_T)
+        n_θ    = length(compute_rot.θ_T)
 
         open(algorithm.paths[c], "w") do file
             # header
             println(file, "t=$(simulation.t)")
             println(file, "N_mol=$N_mol")
-            println(file, "n_theta=$n_θ")
-            println(file, "theta_T=$(join(compute_rot.theta_T, ','))")
+            println(file, "n_θ=$n_θ")
+            println(file, "θ_T=$(join(compute_rot.θ_T, ','))")
 
             # R_ref and Φ_acc
             for k in 1:n_θ

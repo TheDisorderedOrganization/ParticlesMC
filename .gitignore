@@ -17,4 +17,12 @@ data/*
 deps/build.log
 docs/build/*
 
+# Learning notes / restart docs — keep commits & PRs code-only.
+# (Already-tracked .md like README.md and docs/src/*.md stay tracked;
+#  this only prevents NEW .md from being committed. Use `git add -f` to override.)
+*.md
+
+# Generated test output and fixtures
+test/data/
+
 !config_0.xyz
